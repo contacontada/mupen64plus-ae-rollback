@@ -1,5 +1,4 @@
 LOCAL_PATH := $(call my-dir)
-
 ###########################
 # GekkoNet static library
 ###########################
@@ -26,13 +25,9 @@ LOCAL_SRC_FILES := \
     $(GEKKOLIB)/src/sync.cpp
 
 include $(BUILD_STATIC_LIBRARY)
-
 ###########################
 # Rollback JNI bridge
 ###########################
-JNI_LOCAL_PATH := $(LOCAL_PATH)/../mupen64plus-core
-include $(LOCAL_PATH)/../build_common/native_common.mk
-include $(LOCAL_PATH)/../mupen64plus-core/mupen64plus-core.mk
 include $(CLEAR_VARS)
 LOCAL_MODULE := mupen64plus-rollback
 
