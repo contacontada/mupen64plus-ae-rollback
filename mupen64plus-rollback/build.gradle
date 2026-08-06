@@ -1,6 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
+    namespace 'paulscode.mupen64plusae.rollback'
     compileSdkVersion 36
     ndkVersion "26.1.10909125"
 
