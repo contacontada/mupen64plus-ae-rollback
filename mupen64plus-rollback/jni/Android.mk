@@ -1,5 +1,10 @@
 LOCAL_PATH := $(call my-dir)
 
+# The rollback bridge links against the core module; include its NDK module
+# definition in this build as well.
+include $(LOCAL_PATH)/../../mupen64plus-core/Android.mk
+LOCAL_PATH := $(call my-dir)
+
 ###########################
 # GekkoNet static library
 ###########################
