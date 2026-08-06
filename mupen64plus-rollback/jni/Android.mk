@@ -30,6 +30,7 @@ include $(BUILD_STATIC_LIBRARY)
 ###########################
 # Rollback JNI bridge
 ###########################
+JNI_LOCAL_PATH := $(LOCAL_PATH)/../mupen64plus-core
 include $(LOCAL_PATH)/../mupen64plus-core/mupen64plus-core.mk
 include $(CLEAR_VARS)
 LOCAL_MODULE := mupen64plus-rollback
