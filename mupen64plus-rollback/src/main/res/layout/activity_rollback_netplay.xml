@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawerLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="#FF1A1A1A">
+
+    <!-- Main content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Toolbar -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#FF252525"
+            app:titleTextColor="@android:color/white"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Dark" />
+
+        <!-- Status bar -->
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FF1E1E1E"
+            android:padding="12dp"
+            android:textColor="#FF00DFDF"
+            android:textSize="14sp"
+            android:text="Disconnected"
+            android:visibility="gone" />
+
+        <!-- Connect Panel -->
+        <ScrollView
+            android:id="@+id/connectPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            android:background="#FF1A1A1A">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:gravity="center_horizontal">
+
+                <!-- Logo / Icon area -->
+                <ImageView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginBottom="16dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    android:tint="#FF00DFDF"
+                    tools:ignore="ContentDescription" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Rollback Netplay"
+                    android:textColor="@android:color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Play online with rollback netcode"
+                    android:textColor="#FF9C9897"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="32dp" />
+
+                <!-- Server URL -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:hint="Lobby Server URL"
+                    app:hintTextColor="#FF00DFDF"
+                    app:boxStrokeColor="#FF00DFDF"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/serverUrlEdit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="#FF747273"
+                        android:inputType="textUri"
+                        android:text="wss://lobby.rmgk.example.com/ws" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Username -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    android:hint="Player Name"
+                    app:hintTextColor="#FF00DFDF"
+                    app:boxStrokeColor="#FF00DFDF"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/usernameEdit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="#FF747273"
+                        android:inputType="textPersonName" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Connect button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/connectBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Connect to Lobby"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    android:backgroundTint="#FF00DFDF"
+                    android:textColor="#FF1A1A1A"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Direct P2P button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/directP2PBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Direct P2P Connection"
+                    android:textAllCaps="false"
+                    android:textSize="16sp"
+                    android:backgroundTint="#FF424042"
+                    android:textColor="@android:color/white"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    app:strokeColor="#FF747273" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Room List Panel -->
+        <LinearLayout
+            android:id="@+id/roomPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:background="#FF1A1A1A">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/roomRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:padding="8dp"
+                android:background="#FF1A1A1A" />
+
+            <TextView
+                android:id="@+id/roomEmptyText"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="No rooms available\nCreate one or use Quick Match"
+                android:textColor="#FF747273"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
+            <!-- Bottom buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="8dp"
+                android:background="#FF252525">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/createRoomBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Create Room"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:backgroundTint="#FF00DFDF"
+                    android:textColor="#FF1A1A1A"
+                    android:layout_marginEnd="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/quickMatchBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Quick Match"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:backgroundTint="#FF424042"
+                    android:textColor="@android:color/white"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Match Panel -->
+        <LinearLayout
+            android:id="@+id/matchPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:background="#FF1A1A1A">
+
+            <!-- Match status -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="#FF1E1E1E">
+
+                <TextView
+                    android:id="@+id/matchStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Waiting..."
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/matchSubStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textColor="#FF9C9897"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+
+                <ProgressBar
+                    android:id="@+id/matchProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:indeterminateTint="#FF00DFDF"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Player list -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/playerRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:padding="8dp"
+                android:background="#FF1A1A1A" />
+
+            <!-- Match buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="8dp"
+                android:background="#FF252525">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/matchStartBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Start Match"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:backgroundTint="#FF00DFDF"
+                    android:textColor="#FF1A1A1A"
+                    android:layout_marginEnd="4dp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/matchDropBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Leave Room"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:backgroundTint="#FF424042"
+                    android:textColor="@android:color/white"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Sidebar / Navigation Drawer -->
+    <LinearLayout
+        android:layout_width="280dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="#FF252525"
+        android:fitsSystemWindows="true">
+
+        <!-- Sidebar header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="#FF1E1E1E">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginBottom="8dp"
+                android:src="@android:drawable/ic_dialog_info"
+                android:tint="#FF00DFDF"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:id="@+id/sidebarTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rollback Netplay"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/sidebarSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Disconnected"
+                android:textColor="#FF9C9897"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#FF424042" />
+
+        <!-- Menu items -->
+        <ListView
+            android:id="@+id/sidebarListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="#FF252525"
+            android:divider="#FF424042"
+            android:dividerHeight="1dp" />
+
+        <!-- Disconnect button at bottom -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/disconnectBtn"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_margin="16dp"
+            android:text="Disconnect"
+            android:textAllCaps="false"
+            android:backgroundTint="#FF424042"
+            android:textColor="@android:color/white"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="#FF747273" />
+
+    </LinearLayout>
+
+</androidx.drawerlayout.widget.DrawerLayout>
