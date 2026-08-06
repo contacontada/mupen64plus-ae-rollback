@@ -1,0 +1,56 @@
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'paulscode.mupen64plusae.rollback'
+    compileSdkVersion 36
+    ndkVersion "26.1.10909125"
+
+    defaultConfig {
+        minSdkVersion 28
+        targetSdkVersion 36
+
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+
+        externalNativeBuild {
+            ndkBuild {
+                arguments '-j8'
+                arguments "APP_STL=c++_shared"
+                arguments "APP_ALLOW_MISSING_DEPS=true"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path 'jni/Android.mk'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation project(':mupen64plus-core')
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+}
