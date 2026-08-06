@@ -19,6 +19,16 @@
 #include <cmath>
 #include <thread>
 
+#define LOG_TAG "RollbackJNI"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+
+// mupen64plus-core API (linked as shared library)
+#include "api/m64p_types.h"
+#include "api/m64p_frontend.h"
+#include "api/m64p_common.h"
+
 #include <gekkonet.h>
 
 // POSIX UDP adapter for Android (replaces GekkoNet's ASIO-based default adapter)
@@ -142,15 +152,6 @@ static void posix_udp_destroy() {
     g_PosixResults.clear();
 }
 
-// mupen64plus-core API (linked as shared library)
-#include "api/m64p_types.h"
-#include "api/m64p_frontend.h"
-#include "api/m64p_common.h"
-
-#define LOG_TAG "RollbackJNI"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 // ---------------------------------------------------------------------------
 // Global state
