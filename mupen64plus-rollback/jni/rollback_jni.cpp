@@ -25,6 +25,7 @@
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 // mupen64plus-core API (linked as shared library)
+#define M64P_CORE_PROTOTYPES
 #include "api/m64p_types.h"
 #include "api/m64p_frontend.h"
 #include "api/m64p_common.h"
