@@ -17,6 +17,7 @@ android {
             ndkBuild {
                 arguments '-j8'
                 arguments "APP_STL=c++_shared"
+                arguments "APP_ALLOW_MISSING_DEPS=true"
             }
         }
     }
