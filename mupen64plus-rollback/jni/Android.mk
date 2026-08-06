@@ -33,7 +33,7 @@ LOCAL_MODULE := mupen64plus-rollback
 LOCAL_C_INCLUDES := \
     $(GEKKOLIB)/include \
     $(GEKKOLIB)/thirdparty \
-    $(LOCAL_PATH)/../mupen64plus-core/upstream/src
+    $(LOCAL_PATH)/../../mupen64plus-core/upstream/src
 
 LOCAL_CPPFLAGS := -DGEKKONET_STATIC -DGEKKONET_NO_ASIO -O2 -std=c++17 -frtti
 LOCAL_CFLAGS := -DGEKKONET_STATIC -DGEKKONET_NO_ASIO -O2
