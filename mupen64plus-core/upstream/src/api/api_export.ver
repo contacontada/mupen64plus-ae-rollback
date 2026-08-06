@@ -79,4 +79,3 @@ VidExt_ToggleFullScreen;
 VidExt_ResizeWindow;
 VidExt_GL_GetDefaultFramebuffer;
 local: *; };
-set_pif_sync_callback;
