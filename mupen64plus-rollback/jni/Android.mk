@@ -36,6 +36,7 @@ include $(BUILD_STATIC_LIBRARY)
 # Rollback JNI bridge
 ###########################
 include $(CLEAR_VARS)
+LOCAL_PATH := $(call my-dir)
 LOCAL_MODULE := mupen64plus-rollback
 
 LOCAL_C_INCLUDES := \
@@ -46,7 +47,7 @@ LOCAL_C_INCLUDES := \
 LOCAL_CPPFLAGS := -DGEKKONET_STATIC -DGEKKONET_NO_ASIO -O2 -std=c++17 -frtti
 LOCAL_CFLAGS := -DGEKKONET_STATIC -DGEKKONET_NO_ASIO -O2
 
-LOCAL_SRC_FILES := $(LOCAL_PATH)/rollback_jni.cpp
+LOCAL_SRC_FILES := rollback_jni.cpp
 
 LOCAL_STATIC_LIBRARIES := gekkonet
 LOCAL_SHARED_LIBRARIES := mupen64plus-core
