@@ -5,7 +5,7 @@ import android.util.Log;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
-import paulscode.android.mupen64plusae.jni.CoreLibrary;
+
 
 /**
  * Integrates rollback netcode with the AE's CoreInterface.
@@ -24,7 +24,7 @@ public class RollbackCoreBridge {
     private static final String TAG = "RollbackCoreBridge";
 
     // Core library loaded independently (same .so as the AE uses)
-    private static CoreLibrary sCoreLib;
+    private static RollbackCoreLibrary sCoreLib;
 
     // JNA callbacks (must be kept as fields to prevent GC)
     private static RollbackJnaTypes.BeginFrameCallback sBeginFrameCallback;
@@ -40,7 +40,7 @@ public class RollbackCoreBridge {
      */
     public static void init() {
         try {
-            sCoreLib = Native.load("mupen64plus-core", CoreLibrary.class);
+            sCoreLib = Native.load("mupen64plus-core", RollbackCoreLibrary.class);
             Log.i(TAG, "RollbackCoreBridge initialized (core library loaded)");
         } catch (Exception e) {
             Log.e(TAG, "Failed to load core library", e);
