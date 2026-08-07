@@ -1,4 +1,13 @@
-LOCAL_PATH := $(call my-dir)
+JNI_LOCAL_PATH := $(call my-dir)
+
+# Build the core in the same ndk-build invocation so the JNI bridge can
+# resolve CoreDoCommand and the rollback API symbols at link time.
+include $(JNI_LOCAL_PATH)/../../mupen64plus-core/Android.mk
+
+# The core makefile changes JNI_LOCAL_PATH/LOCAL_PATH to its own directory.
+# Restore the rollback module directory before declaring rollback targets.
+JNI_LOCAL_PATH := $(call my-dir)
+LOCAL_PATH := $(JNI_LOCAL_PATH)
 
 ###########################
 # GekkoNet static library
