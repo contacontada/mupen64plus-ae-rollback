@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="paulscode.mupen64plusae.rollback">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+    <application>
+        <service
+            android:name=".RollbackNetplayService"
+            android:exported="false" />
+
+        <service
+            android:name=".NetplayOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <activity
+            android:name=".RollbackNetplayActivity"
+            android:exported="true"
+            android:label="Rollback Netplay"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="paulscode.mupen64plusae.ROLLBACK_NETPLAY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".RollbackSettingsActivity"
+            android:exported="false"
+            android:label="Rollback Settings" />
+    </application>
+
+</manifest>
