@@ -72,11 +72,11 @@ public class RollbackSettingsActivity extends AppCompatActivity {
 
         // Server section
         addSectionTitle(root, "Server");
-        serverUrlEdit = addTextInput(root, "Lobby Server URL", DEFAULT_SERVER_URL, InputType.TYPE_TEXT_URI);
+        serverUrlEdit = addTextInput(root, "Lobby Server URL", DEFAULT_SERVER_URL, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
 
         // Player section
         addSectionTitle(root, "Player");
-        usernameEdit = addTextInput(root, "Player Name", "", InputType.TYPE_TEXT_PERSON_NAME);
+        usernameEdit = addTextInput(root, "Player Name", "", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
 
         // Network section
         addSectionTitle(root, "Network");
