@@ -8,9 +8,9 @@ Uma versão do **Mupen64Plus-AE** para Android com suporte experimental a **roll
 
 O APK é compilado automaticamente pelo GitHub Actions. Para baixar o artifact mais recente, acesse:
 
-**[Artifacts e execuções do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions)**
+**[Baixar o APK diretamente — Mupen64PlusAE-release.apk](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31233131500/artifacts/9014699633)**
 
-Abra a execução mais recente concluída com sucesso e baixe o artifact que contém `Mupen64PlusAE-release.apk`. O workflow usado está em [` .github/workflows/build.yml`](.github/workflows/build.yml).
+Artifact gerado pela execução bem-sucedida [31233131500](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31233131500), com o nome `mupen64plus-ae-main-f2bb64b`. Para consultar outras versões, acesse as [execuções do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions). O workflow usado está em [` .github/workflows/build.yml`](.github/workflows/build.yml).
 
 ## Componentes principais
 
