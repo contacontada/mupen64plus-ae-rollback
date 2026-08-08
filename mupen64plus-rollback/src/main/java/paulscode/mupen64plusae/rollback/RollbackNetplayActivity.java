@@ -452,6 +452,33 @@ public class RollbackNetplayActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 32, 48, 16);
 
+        TextView playerLabel = new TextView(this);
+        playerLabel.setText("Your player slot");
+        playerLabel.setTextColor(0xFF9C9897);
+        layout.addView(playerLabel);
+
+        // Both sides of a P2P connection MUST agree on who is player 1 and
+        // who is player 2 - otherwise both devices add themselves as
+        // "local player 1" and neither ever represents player 2 in the
+        // shared simulation, which breaks 2-player games entirely. There
+        // is no host/join negotiation in a bare IP-address P2P connection,
+        // so the two people connecting have to agree on this out of band
+        // (e.g. over voice chat) and pick different slots here.
+        android.widget.RadioGroup playerGroup = new android.widget.RadioGroup(this);
+        playerGroup.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+        android.widget.RadioButton player1Radio = new android.widget.RadioButton(this);
+        player1Radio.setId(View.generateViewId());
+        player1Radio.setText("Player 1");
+        player1Radio.setTextColor(0xFFFFFFFF);
+        player1Radio.setChecked(true);
+        android.widget.RadioButton player2Radio = new android.widget.RadioButton(this);
+        player2Radio.setId(View.generateViewId());
+        player2Radio.setText("Player 2");
+        player2Radio.setTextColor(0xFFFFFFFF);
+        playerGroup.addView(player1Radio);
+        playerGroup.addView(player2Radio);
+        layout.addView(playerGroup);
+
         EditText ipEdit = new EditText(this);
         ipEdit.setHint("Remote IP address");
         ipEdit.setTextColor(0xFFFFFFFF);
@@ -463,17 +490,21 @@ public class RollbackNetplayActivity extends AppCompatActivity {
         portEdit.setTextColor(0xFFFFFFFF);
         portEdit.setHintTextColor(0xFF747273);
         portEdit.setInputType(InputType.TYPE_CLASS_NUMBER);
-        portEdit.setText("4445");
+        // Must match the local port both sides bind to below (4444), or a
+        // peer using default values would send to a port nobody is
+        // listening on.
+        portEdit.setText("4444");
         layout.addView(portEdit);
 
         builder.setView(layout);
         builder.setPositiveButton("Connect", (dialog, which) -> {
             String ip = ipEdit.getText().toString().trim();
             int port = Integer.parseInt(portEdit.getText().toString().trim());
+            int localPlayer = player2Radio.isChecked() ? 2 : 1;
             if (!ip.isEmpty() && port > 0) {
                 netplayService.startDirectP2P(
                     !romName.isEmpty() ? romName : "N64 Game",
-                    1, 4444, ip, port, 2);
+                    localPlayer, 4444, ip, port, 2);
                 showPanel("match");
                 matchStatusText.setText("P2P Connection");
                 matchSubStatusText.setText("Connecting to " + ip + ":" + port);

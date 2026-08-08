@@ -1,20 +1,20 @@
 # Mupen64Plus-AE Rollback
 
-Versão do **Mupen64Plus-AE** para Android com suporte experimental a **rollback netplay**. Esta atualização incorpora o pacote `mupen64plus-ae-rollback-fixed_patch5.tar.gz` enviado para o projeto.
+Versão do **Mupen64Plus-AE** para Android com suporte experimental a **rollback netplay**. Esta atualização incorpora o arquivo `mupen64plus-ae-rollback-fixed_patch6.tar.gz` enviado para o projeto.
 
 > O rollback netplay é experimental. O comportamento pode variar conforme o dispositivo, a versão do Android, a ABI e a configuração da partida em rede.
 
 ## Download do APK
 
-O APK desta versão foi compilado com sucesso pelo GitHub Actions.
+O APK do patch6 é compilado automaticamente pelo GitHub Actions. O link direto para o artifact será publicado nesta seção após a execução correspondente ao patch6 terminar com sucesso.
 
-**[Baixar diretamente o APK do patch5 — Mupen64PlusAE-release.apk](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31234295771/artifacts/9015012611)**
+**[Acompanhar as execuções e baixar o APK](https://github.com/contacontada/mupen64plus-ae-rollback/actions)**
 
-O artifact `mupen64plus-ae-main-630dcac` foi gerado pela [execução 31234295771](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31234295771). Para consultar outras versões, acesse as [execuções do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions). O arquivo gerado é `Mupen64PlusAE-release.apk`.
+O arquivo gerado pelo workflow é `Mupen64PlusAE-release.apk`.
 
-## Alterações do patch5
+## Alterações do patch6
 
-O patch5 atualiza a integração do módulo de rollback, incluindo alterações no build Gradle, no `Android.mk`, no manifesto Android, na ponte nativa, na biblioteca JNA e nos serviços de netplay. Também adiciona o `RollbackCrashLogger` e os estilos Android necessários ao módulo.
+O patch6 atualiza o código de `RollbackNetplayActivity` no módulo `mupen64plus-rollback`, mantendo as correções nativas, Java, JNA, manifesto e empacotamento introduzidas nas versões anteriores. O restante da árvore do projeto, incluindo o workflow de compilação, foi aplicado a partir do pacote enviado.
 
 ## Componentes principais
 
@@ -29,9 +29,9 @@ O patch5 atualiza a integração do módulo de rollback, incluindo alterações 
 
 ## Integração de rollback
 
-O módulo `mupen64plus-rollback` fornece a infraestrutura experimental para partidas em rede com controle de frames, callbacks nativos, recuperação de estado e comunicação entre os jogadores. A integração Java–nativa é realizada pela `RollbackCoreBridge` usando a interface `RollbackCoreLibrary`.
+O módulo `mupen64plus-rollback` fornece a infraestrutura experimental para partidas em rede com controle de frames, callbacks nativos, recuperação de estado e comunicação entre jogadores. A integração Java–nativa é realizada pela `RollbackCoreBridge` usando a interface `RollbackCoreLibrary`.
 
-Entre as classes principais estão `RollbackNetplayActivity`, `RollbackSettingsActivity`, `RollbackNetplayService`, `NetplayOverlayService` e `RollbackCrashLogger`.
+As classes centrais incluem `RollbackNetplayActivity`, `RollbackSettingsActivity`, `RollbackNetplayService`, `NetplayOverlayService` e `RollbackCrashLogger`.
 
 ## Compilação local
 
