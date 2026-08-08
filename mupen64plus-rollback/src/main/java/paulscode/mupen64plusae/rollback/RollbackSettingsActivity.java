@@ -35,7 +35,14 @@ public class RollbackSettingsActivity extends AppCompatActivity {
     private static final String KEY_SHOW_OVERLAY = "show_overlay";
     private static final String KEY_DESYNC_DETECTION = "desync_detection";
 
-    private static final String DEFAULT_SERVER_URL = "wss://lobby.rmgk.example.com/ws";
+    // RMG-K's own official production lobby server (see RMG-K source:
+    // Source/RMG/UserInterface/Dialog/Lobby/LobbyConnectDialog.cpp,
+    // kDefaultLobbyUrl). Using this means matches here can be made against
+    // real RMG-K desktop players, not just other copies of this app.
+    // This field is still fully editable in Settings if a self-hosted
+    // server is preferred instead (see /mnt/user-data/outputs style
+    // rmgk-lobby-server for a compatible from-scratch implementation).
+    private static final String DEFAULT_SERVER_URL = "ws://216.128.157.98:8080/ws";
     private static final int DEFAULT_DELAY = 2;
     private static final int DEFAULT_PREDICTION = 7;
 

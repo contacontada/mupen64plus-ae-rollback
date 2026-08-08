@@ -54,6 +54,7 @@ public class RmgkLobbyClient {
     private static final int PROBE_BURST = 10;
     private static final int PROBE_PACKET_SIZE = 4 + 1 + 8 + 8;
     private static final int HEARTBEAT_INTERVAL_MS = 15_000;
+    private static final int HTTP_KEEPALIVE_INTERVAL_MS = 7 * 60 * 1000; // 7 minutes, as requested
     private static final int UDP_KEEPALIVE_INTERVAL_MS = 20_000;
     private static final int PROBE_RETRY_INTERVAL_MS = 300;
     private static final int PROBE_MAX_ATTEMPTS = 4;
@@ -158,6 +159,8 @@ public class RmgkLobbyClient {
     // Timers
     private ScheduledFuture<?> heartbeatFuture;
     private ScheduledFuture<?> keepaliveFuture;
+    private ScheduledFuture<?> httpKeepaliveFuture;
+    private String pendingHttpBaseUrl = "";
 
     // Pending username/roms for HELLO
     private String pendingUsername = "";
@@ -219,6 +222,15 @@ public class RmgkLobbyClient {
             .readTimeout(0, TimeUnit.MILLISECONDS) // no read timeout for WS
             .build();
 
+        // Free-tier hosts (e.g. Render) spin the service down after a period
+        // of inactivity and take 30-60s to "cold start" back up on the next
+        // request. Hitting the plain HTTP health-check endpoint first (which
+        // wakes the service) avoids the WebSocket handshake itself timing
+        // out against a server that hasn't finished waking up yet.
+        pingServerAwake(wsUrl, () -> openWebSocket(wsUrl));
+    }
+
+    private void openWebSocket(String wsUrl) {
         Request request = new Request.Builder().url(wsUrl).build();
         webSocket = httpClient.newWebSocket(request, new WebSocketListener() {
             @Override
@@ -249,6 +261,72 @@ public class RmgkLobbyClient {
                 String error = t.getMessage();
                 if (response != null) error = response.code() + ": " + error;
                 onWsError(error);
+            }
+        });
+    }
+
+    /**
+     * Best-effort "wake up" ping for free-tier hosts that spin down when
+     * idle. Tries a plain HTTP GET against the server's health-check
+     * endpoint with a generous timeout and a couple of retries (a cold
+     * start can take 30-60s on Render's free tier); proceeds to open the
+     * WebSocket regardless of whether the ping succeeded, since the ping
+     * is purely an optimization - the WS connection attempt itself is
+     * still the source of truth for whether the server is reachable.
+     */
+    private void pingServerAwake(String wsUrl, Runnable onDone) {
+        String httpUrl = wsUrl.replaceFirst("^ws://", "http://").replaceFirst("^wss://", "https://");
+        // Strip any path - the health check is served at "/".
+        int schemeEnd = httpUrl.indexOf("://") + 3;
+        int pathStart = httpUrl.indexOf('/', schemeEnd);
+        if (pathStart > 0) httpUrl = httpUrl.substring(0, pathStart);
+
+        final String finalHttpUrl = httpUrl;
+        pendingHttpBaseUrl = httpUrl;
+        executor.execute(() -> {
+            OkHttpClient wakeClient = new OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .build();
+
+            boolean awake = false;
+            for (int attempt = 1; attempt <= 3 && !awake; attempt++) {
+                try {
+                    Request req = new Request.Builder().url(finalHttpUrl).get().build();
+                    try (Response resp = wakeClient.newCall(req).execute()) {
+                        if (resp.isSuccessful()) {
+                            awake = true;
+                            Log.i(TAG, "Lobby server is awake (attempt " + attempt + ")");
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Wake ping attempt " + attempt + " failed: " + e.getMessage());
+                }
+            }
+            if (!awake) {
+                Log.w(TAG, "Could not confirm server is awake after retries; connecting anyway");
+            }
+            wakeClient.dispatcher().executorService().shutdown();
+            mainHandler.post(onDone);
+        });
+    }
+
+    /**
+     * Periodic HTTP keepalive, independent of the WebSocket-level
+     * HEARTBEAT, so the underlying host doesn't consider the service idle
+     * during a long play session (e.g. Render's free tier spins services
+     * down after ~15 minutes with no HTTP requests - a 7-minute period
+     * keeps well under that with margin).
+     */
+    private void sendHttpKeepalive(String httpUrl) {
+        executor.execute(() -> {
+            try {
+                Request req = new Request.Builder().url(httpUrl).get().build();
+                try (Response resp = httpClient.newCall(req).execute()) {
+                    Log.d(TAG, "HTTP keepalive ping: " + resp.code());
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "HTTP keepalive ping failed: " + e.getMessage());
             }
         });
     }
@@ -285,6 +363,11 @@ public class RmgkLobbyClient {
             d.put("maxPlayers", maxPlayers);
             d.put("delay", delay);
             d.put("prediction", prediction);
+            // RMG-K's own client always sends pacing=1 ("Smooth") - the
+            // picker for other values exists in their UI but is hidden/
+            // unused. Matching this exactly since the real server may
+            // require the field.
+            d.put("pacing", 1);
             if (password != null && !password.isEmpty()) d.put("password", password);
             sendEnvelope("ROOM_CREATE", d);
         } catch (JSONException e) { Log.e(TAG, "createRoom JSON error", e); }
@@ -362,6 +445,14 @@ public class RmgkLobbyClient {
         // Start heartbeat
         heartbeatFuture = scheduler.scheduleAtFixedRate(
             this::sendHeartbeat, HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS, TimeUnit.MILLISECONDS);
+
+        // Start HTTP keepalive (separate from the WS heartbeat above - see
+        // sendHttpKeepalive() for why this exists independently)
+        if (!pendingHttpBaseUrl.isEmpty()) {
+            httpKeepaliveFuture = scheduler.scheduleAtFixedRate(
+                () -> sendHttpKeepalive(pendingHttpBaseUrl),
+                HTTP_KEEPALIVE_INTERVAL_MS, HTTP_KEEPALIVE_INTERVAL_MS, TimeUnit.MILLISECONDS);
+        }
     }
 
     private void onWsTextMessage(String text) {
@@ -779,6 +870,7 @@ public class RmgkLobbyClient {
     private void stopTimers() {
         if (heartbeatFuture != null) { heartbeatFuture.cancel(false); heartbeatFuture = null; }
         if (keepaliveFuture != null) { keepaliveFuture.cancel(false); keepaliveFuture = null; }
+        if (httpKeepaliveFuture != null) { httpKeepaliveFuture.cancel(false); httpKeepaliveFuture = null; }
     }
 
     private String detectLocalIPv4() {

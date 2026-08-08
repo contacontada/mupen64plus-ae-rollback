@@ -1,60 +1,49 @@
-# Mupen64Plus-AE Rollback
+# Mupen64Plus AE Rollback
 
-Versão do **Mupen64Plus-AE** para Android com suporte experimental a **rollback netplay**. Esta atualização incorpora o arquivo `mupen64plus-ae-rollback-fixed_patch6.tar.gz` enviado para o projeto.
+Mupen64Plus AE Rollback is an Android Edition of Mupen64Plus with experimental rollback-netcode support. It combines the Mupen64Plus Android frontend with the rollback module, JNI bridge and GekkoNet networking components included in this repository.
 
-> O rollback netplay é experimental. O comportamento pode variar conforme o dispositivo, a versão do Android, a ABI e a configuração da partida em rede.
+This repository is a community-maintained fork of [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae). It is not affiliated with the original project unless explicitly stated. For the original project documentation and support channels, see the [official Mupen64Plus AE repository](https://github.com/mupen64plus-ae/mupen64plus-ae).
 
-## Download do APK
+## Continuous integration
 
-O APK do patch6 foi compilado com sucesso pelo GitHub Actions.
+Every push and pull request starts the Android build workflow. The release APK is uploaded as a GitHub Actions Artifact when the build succeeds.
 
-**[Baixar diretamente o APK do patch6 — Mupen64PlusAE-release.apk](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31235371149/artifacts/9015375602)**
-
-O artifact `mupen64plus-ae-main-c3e5ff3` foi gerado pela [execução 31235371149](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31235371149). Para consultar outras versões, acesse as [execuções do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions). O arquivo gerado é `Mupen64PlusAE-release.apk`.
-
-## Alterações do patch6
-
-O patch6 atualiza o código de `RollbackNetplayActivity` no módulo `mupen64plus-rollback`, mantendo as correções nativas, Java, JNA, manifesto e empacotamento introduzidas nas versões anteriores. O restante da árvore do projeto, incluindo o workflow de compilação, foi aplicado a partir do pacote enviado.
-
-## Componentes principais
-
-| Componente | Descrição |
+| Resource | Link |
 |---|---|
-| `app` | Aplicativo Android principal e integração com o emulador. |
-| `mupen64plus-core` | Núcleo nativo do Mupen64Plus. |
-| `mupen64plus-rollback` | Activities, serviços, ponte JNA e lógica de rollback netplay. |
-| `mupen64plus-video-gliden64` | Plugin de vídeo. |
-| `miniupnp-bridge` | Integração de conectividade e descoberta de rede. |
-| `.github/workflows/build.yml` | Compilação automática e upload do APK. |
+| Repository | [contacontada/mupen64plus-ae-rollback](https://github.com/contacontada/mupen64plus-ae-rollback) |
+| Workflow runs | [GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) |
+| Build status | [![Build Status](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg)](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) |
+| Latest APK Artifact | Open the most recent successful workflow run and download the artifact named `mupen64plus-ae-main-<short-sha>` |
 
-## Integração de rollback
+Artifacts are available from the **Summary** page of each successful workflow run. GitHub requires an authenticated session to download private workflow artifacts, even when the repository itself is public.
 
-O módulo `mupen64plus-rollback` fornece a infraestrutura experimental para partidas em rede com controle de frames, callbacks nativos, recuperação de estado e comunicação entre jogadores. A integração Java–nativa é realizada pela `RollbackCoreBridge` usando a interface `RollbackCoreLibrary`.
+## Rollback documentation
 
-As classes centrais incluem `RollbackNetplayActivity`, `RollbackSettingsActivity`, `RollbackNetplayService`, `NetplayOverlayService` e `RollbackCrashLogger`.
+The rollback-specific architecture, build notes and known limitations are described in [ROLLBACK_NETCODE_README.md](ROLLBACK_NETCODE_README.md). The recorded build failures and their fixes are maintained in [BUILD_ERRORS_LOG.md](BUILD_ERRORS_LOG.md) and [erros-e-solucoes.md](erros-e-solucoes.md).
 
-## Compilação local
+## Local build
 
-Instale o [Android Studio](https://developer.android.com/studio), o Android SDK e o Android NDK `26.1.10909125`. Depois clone o repositório:
+Install [Android Studio](https://developer.android.com/studio), the Android SDK and the NDK version supported by the Gradle configuration. Linux users should also have `file`, `gawk`, a JDK compatible with the workflow, and the standard Android build tools available.
+
+After cloning the repository, run the structural checks and then build the release APK:
 
 ```bash
 git clone https://github.com/contacontada/mupen64plus-ae-rollback.git
 cd mupen64plus-ae-rollback
-./gradlew assembleRelease
+./verify_build.sh
+./gradlew assemble
 ```
 
-O APK release será gerado normalmente em `app/build/outputs/apk/release/`. Para reproduzir o ambiente do workflow, mantenha o NDK `26.1.10909125` instalado.
+The release APK is written to `app/build/outputs/apk/release/Mupen64PlusAE-release.apk` when the build completes successfully. The rollback module can also be built independently with:
 
-## GitHub Actions
+```bash
+./gradlew :mupen64plus-rollback:assembleRelease
+```
 
-Cada push na branch `main` aciona o workflow [`build.yml`](.github/workflows/build.yml). Ele configura o ambiente Android, instala as dependências, compila a variante release, registra o commit e publica o APK como artifact.
+## Original project
 
-A página de [execuções do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions) permite acompanhar o build e baixar os artifacts disponíveis.
+For the upstream Android frontend, visit [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae). For general support and discussion, consult the [official forum](http://www.paulscode.com/forum/index.php).
 
-## Relato de problemas
+## License
 
-Ao relatar uma falha, informe o modelo do dispositivo, a versão do Android, a ABI, o commit ou artifact instalado e os logs relevantes. Para problemas de netplay, inclua o servidor, o atraso configurado e a etapa em que a conexão falhou.
-
-## Licença e origem
-
-Este repositório é uma variante de desenvolvimento baseada no ecossistema Mupen64Plus-AE. Consulte os arquivos de licença e os avisos de copyright incluídos no código-fonte para conhecer as condições aplicáveis a cada componente. O projeto original pode ser consultado em [mupen64plus-ae/mupen64plus-ae](https://github.com/mupen64plus-ae/mupen64plus-ae).
+The project contains code under the licenses of its upstream components. Consult the license files and notices distributed with each component before redistributing binaries.

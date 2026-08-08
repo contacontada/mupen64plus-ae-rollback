@@ -60,3 +60,20 @@ linker command failed with exit code 1 (use -v to see invocation)
 
 ---
 *Este arquivo será atualizado conforme novos erros forem encontrados e corrigidos durante o processo de build.*
+
+## 8. Ambiente local sem Android SDK
+
+**Descrição:** A verificação estrutural passou, mas o build local com `./gradlew assemble` não pôde iniciar a configuração dos módulos porque o sandbox não possui `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `sdkmanager` ou um `local.properties` apontando para um Android SDK válido.
+
+**Erro:**
+```text
+SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable or by setting the sdk.dir path in local.properties.
+```
+
+**Solução aplicada:** Não foi adicionada uma configuração local específica ao repositório, pois `local.properties` contém caminhos dependentes da máquina e não deve ser versionado. O workflow do GitHub Actions já instala/configura o SDK por meio de `android-actions/setup-android@v3` e define `ANDROID_SDK_ROOT`, portanto a validação de compilação deve ser concluída no CI. O README foi atualizado com os pré-requisitos para reproduzir o build localmente.
+
+## 9. Condição de Release apontava para a branch incorreta
+
+**Descrição:** O repositório usa `main` como branch padrão, mas a etapa opcional de Release do workflow ainda estava condicionada a `refs/heads/master`.
+
+**Solução:** A condição foi atualizada para `refs/heads/main`. O upload do APK como Artifact continua ocorrendo na etapa `build` para pushes e pull requests.

@@ -99,11 +99,11 @@ fi
 # Check manifest
 echo ""
 echo "6. Checking manifests..."
-if grep -q "RollbackNetplay" app/src/main/AndroidManifest.xml; then
-    echo "   OK: app manifest has rollback activity"
+if grep -q "RollbackNetplay" mupen64plus-rollback/src/main/AndroidManifest.xml; then
+    echo "   OK: rollback manifest has rollback activity"
 else
-    echo "   WARNING: app manifest missing rollback activity"
-    WARNINGS=$((WARNINGS+1))
+    echo "   ERROR: rollback manifest missing rollback activity"
+    ERRORS=$((ERRORS+1))
 fi
 
 # Check XML layouts
