@@ -6,11 +6,11 @@ Versão do **Mupen64Plus-AE** para Android com suporte experimental a **rollback
 
 ## Download do APK
 
-O APK desta versão é compilado automaticamente pelo GitHub Actions. O link direto para o artifact será publicado nesta seção assim que a execução do patch5 terminar com sucesso.
+O APK desta versão foi compilado com sucesso pelo GitHub Actions.
 
-**[Acompanhar as execuções e baixar o APK](https://github.com/contacontada/mupen64plus-ae-rollback/actions)**
+**[Baixar diretamente o APK do patch5 — Mupen64PlusAE-release.apk](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31234295771/artifacts/9015012611)**
 
-O arquivo gerado pelo workflow é `Mupen64PlusAE-release.apk`.
+O artifact `mupen64plus-ae-main-630dcac` foi gerado pela [execução 31234295771](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31234295771). Para consultar outras versões, acesse as [execuções do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions). O arquivo gerado é `Mupen64PlusAE-release.apk`.
 
 ## Alterações do patch5
 
