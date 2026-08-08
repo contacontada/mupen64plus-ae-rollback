@@ -97,3 +97,31 @@ Esta seção será preenchida após o push:
 [2]: https://github.com/contacontada/mupen64plus-ae-rollback/blob/main/.github/workflows/build.yml "Workflow de compilação do repositório"
 
 [3]: https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts "GitHub Actions — armazenamento de dados como artifacts"
+
+### 11. Permissão insuficiente para a etapa Release
+
+O job `Build` compilou o APK e finalizou o Artifact `mupen64plus-ae-main-d1c52f6`, mas o job `Release` falhou ao tentar atualizar a tag `Pre-release`:
+
+```text
+remote: Permission to contacontada/mupen64plus-ae-rollback.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/contacontada/mupen64plus-ae-rollback/': The requested URL returned error: 403
+```
+
+**Solução:** foi adicionada a permissão global `contents: write` ao workflow. O APK do primeiro run está disponível e foi baixado para verificação; um novo run será usado para validar a execução completa, incluindo Release.
+
+## Resultado do primeiro CI após o push
+
+| Item | Valor |
+|---|---|
+| Commit publicado | `d1c52f6efba30c4a40c5bbe118c550a65335bd30` |
+| Run do GitHub Actions | [31274026784][4] |
+| Job Build | **Sucesso** |
+| Job Release | Falhou com HTTP 403 por falta de `contents: write` |
+| Artifact do APK | [`mupen64plus-ae-main-d1c52f6`][5] |
+| Arquivo verificado | `Mupen64PlusAE-release.apk` — 34.159.805 bytes |
+
+O workflow foi corrigido após esse run. O resultado final deverá ser atualizado após a nova execução.
+
+[4]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31274026784 "Primeiro run após a atualização do patch8"
+
+[5]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31274026784/artifacts/9026649077 "Artifact do APK do primeiro run"

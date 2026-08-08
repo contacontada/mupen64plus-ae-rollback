@@ -2,6 +2,9 @@ name: Mupen64Plus-AE
 
 on: [push, pull_request]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build

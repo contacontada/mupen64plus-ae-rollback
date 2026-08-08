@@ -77,3 +77,15 @@ SDK location not found. Define a valid SDK location with an ANDROID_HOME environ
 **Descrição:** O repositório usa `main` como branch padrão, mas a etapa opcional de Release do workflow ainda estava condicionada a `refs/heads/master`.
 
 **Solução:** A condição foi atualizada para `refs/heads/main`. O upload do APK como Artifact continua ocorrendo na etapa `build` para pushes e pull requests.
+
+## 10. Token do GitHub Actions sem permissão para atualizar a tag
+
+**Descrição:** O job `Build` compilou e publicou o Artifact corretamente, mas o job `Release` falhou ao executar `git push -f origin Pre-release`.
+
+**Erro:**
+```text
+remote: Permission to contacontada/mupen64plus-ae-rollback.git denied to github-actions[bot].
+fatal: unable to access 'https://github.com/contacontada/mupen64plus-ae-rollback/': The requested URL returned error: 403
+```
+
+**Solução:** Adicionada a permissão explícita `contents: write` no workflow. Isso permite que o `GITHUB_TOKEN` do job atualize a tag `Pre-release` e que a etapa de Release crie/atualize a release correspondente. O APK já havia sido compilado com sucesso; um novo run será usado para validar a correção completa.
