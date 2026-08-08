@@ -28,6 +28,10 @@ android {
         }
     }
 
+    packagingOptions {
+        exclude '**/libmupen64plus-core.so'
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -45,21 +49,16 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-
-    packagingOptions {
-        jniLibs {
-            excludes += ['**/libmupen64plus-core.so']
-        }
-    }
 }
 
 dependencies {
-    implementation ('net.java.dev.jna:jna-platform:5.17.0') {
-        exclude group: 'net.java.dev.jna', module: 'jna'
-    }
-    implementation 'net.java.dev.jna:jna:5.17.0@aar'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+
+    implementation ('net.java.dev.jna:jna-platform:5.17.0') {
+        exclude group: 'net.java.dev.jna', module: 'jna'
+    }
+    implementation 'net.java.dev.jna:jna:5.17.0@aar'
 }

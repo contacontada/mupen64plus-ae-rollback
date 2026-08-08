@@ -5,8 +5,6 @@ import android.util.Log;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
-
-
 /**
  * Integrates rollback netcode with the AE's CoreInterface.
  * Handles the transition from normal emulation to rollback mode.

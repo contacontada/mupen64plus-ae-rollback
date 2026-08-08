@@ -54,6 +54,7 @@ public class RollbackNetplayService extends Service {
 
     @Override
     public void onCreate() {
+        RollbackCrashLogger.install(this);
         super.onCreate();
         lobbyClient = new RmgkLobbyClient();
         lobbyClient.addListener(lobbyListener);

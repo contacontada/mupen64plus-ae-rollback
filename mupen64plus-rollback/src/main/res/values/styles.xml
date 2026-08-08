@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- The host app's default theme (Theme.Holo, see app module's
+         styles.xml) is not a MaterialComponents theme, but this module's
+         activities use com.google.android.material widgets (MaterialButton,
+         TextInputEditText, SwitchMaterial). Those widgets throw immediately
+         at inflate time if the active theme isn't Theme.MaterialComponents
+         (or a descendant), so both rollback activities must be given one of
+         the themes below via android:theme in AndroidManifest.xml rather
+         than relying on the app's <application> theme. -->
+
+    <!-- RollbackNetplayActivity supplies its own Toolbar via
+         setSupportActionBar(), so it needs a NoActionBar variant - using a
+         theme that already has a decor action bar would make
+         setSupportActionBar() throw "This Activity already has an action
+         bar supplied by the window decor.". -->
+    <style name="Theme.Rollback.NoActionBar" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:navigationBarColor">@color/rollback_background</item>
+        <item name="android:statusBarColor">@color/rollback_background</item>
+        <item name="colorPrimary">@color/rollback_primary</item>
+        <item name="colorPrimaryDark">@color/rollback_background</item>
+        <item name="colorAccent">@color/rollback_accent</item>
+    </style>
+
+    <!-- RollbackSettingsActivity relies on the theme's own built-in action
+         bar instead of managing a Toolbar itself. -->
+    <style name="Theme.Rollback.ActionBar" parent="Theme.MaterialComponents">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:navigationBarColor">@color/rollback_background</item>
+        <item name="android:statusBarColor">@color/rollback_background</item>
+        <item name="colorPrimary">@color/rollback_primary</item>
+        <item name="colorPrimaryDark">@color/rollback_background</item>
+        <item name="colorAccent">@color/rollback_accent</item>
+    </style>
+
+</resources>

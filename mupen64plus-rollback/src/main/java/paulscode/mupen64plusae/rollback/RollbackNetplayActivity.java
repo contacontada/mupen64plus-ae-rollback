@@ -92,6 +92,7 @@ public class RollbackNetplayActivity extends AppCompatActivity {
     private String romName = "";
 
     public static void launch(Context context, String romMd5, String romName) {
+        RollbackCrashLogger.install(context);
         Intent intent = new Intent(context, RollbackNetplayActivity.class);
         intent.putExtra("ROM_MD5", romMd5 != null ? romMd5 : "");
         intent.putExtra("ROM_NAME", romName != null ? romName : "");
@@ -100,6 +101,7 @@ public class RollbackNetplayActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        RollbackCrashLogger.install(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rollback_netplay);
 

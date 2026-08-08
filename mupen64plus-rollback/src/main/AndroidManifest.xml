@@ -21,6 +21,8 @@
             android:name=".RollbackNetplayActivity"
             android:exported="true"
             android:label="Rollback Netplay"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Rollback.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="paulscode.mupen64plusae.ROLLBACK_NETPLAY" />
@@ -31,6 +33,7 @@
         <activity
             android:name=".RollbackSettingsActivity"
             android:exported="false"
+            android:theme="@style/Theme.Rollback.ActionBar"
             android:label="Rollback Settings" />
     </application>
 
