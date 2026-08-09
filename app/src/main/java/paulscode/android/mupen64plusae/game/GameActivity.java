@@ -95,6 +95,7 @@ import paulscode.android.mupen64plusae.util.FileUtil;
 import paulscode.android.mupen64plusae.util.LocaleContextWrapper;
 import paulscode.android.mupen64plusae.util.Notifier;
 import paulscode.android.mupen64plusae.util.RomDatabase;
+import paulscode.mupen64plusae.rollback.RollbackGameBridge;
 
 import static paulscode.android.mupen64plusae.persistent.GlobalPrefs.DEFAULT_LOCALE_OVERRIDE;
 
@@ -171,6 +172,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     private boolean mDoRestart = false;
     private boolean mIsNetplayEnabled = false;
     private boolean mIsNetplayServer = false;
+    private boolean mIsRollbackMode = false;
+    private boolean mRollbackReadySignaled = false;
     private boolean mForceExit = false;
     private int mServerPort = 0;
 
@@ -308,6 +311,11 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         mDoRestart = extras.getBoolean( ActivityHelper.Keys.DO_RESTART, false );
         mIsNetplayEnabled = extras.getBoolean( ActivityHelper.Keys.NETPLAY_ENABLED, false );
         mIsNetplayServer = extras.getBoolean( ActivityHelper.Keys.NETPLAY_SERVER, false );
+        mIsRollbackMode = extras.getBoolean( ActivityHelper.Keys.ROLLBACK_MODE, false );
+
+        if (mIsRollbackMode) {
+            RollbackGameBridge.setMatchEndListener(() -> runOnUiThread(this::finish));
+        }
 
         if( TextUtils.isEmpty( mRomPath ) || TextUtils.isEmpty( mRomMd5 ) )
             finish();
@@ -937,7 +945,19 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         if (mCoreFragment.hasServiceStarted()) {
             mGameSurface.setSurfaceTexture(mCoreFragment.getSurfaceTexture());
 
-            if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerOpenState) {
+            if (mIsRollbackMode) {
+                // Rollback Netplay drives frame-by-frame execution itself
+                // from a background thread (see RollbackNetplayService /
+                // main_rollback_run_frame in the native core), which
+                // requires the core to be sitting paused rather than
+                // auto-running in real time like a normal single-player
+                // session.
+                mCoreFragment.pauseEmulator();
+                if (!mRollbackReadySignaled) {
+                    mRollbackReadySignaled = true;
+                    RollbackGameBridge.notifyCoreReady();
+                }
+            } else if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerOpenState) {
                 mCoreFragment.pauseEmulator();
             } else {
                 mCoreFragment.resumeEmulator();

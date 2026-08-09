@@ -109,6 +109,13 @@ public class ActivityHelper
         public static final String VIDEO_RENDER_HEIGHT  = NAMESPACE + "VIDEO_RENDER_HEIGHT";
         public static final String NETPLAY_ENABLED      = NAMESPACE + "NETPLAY_ENABLED";
         public static final String NETPLAY_SERVER       = NAMESPACE + "NETPLAY_SERVER";
+        // Rollback Netplay (GekkoNet-based) - separate from the legacy
+        // NETPLAY_ENABLED/NETPLAY_SERVER mechanism above. When true,
+        // GameActivity loads the ROM and starts the core exactly like
+        // normal, but keeps it paused instead of auto-resuming, and
+        // signals RollbackGameBridge once ready so RollbackNetplayService
+        // can take over frame-by-frame execution.
+        public static final String ROLLBACK_MODE        = NAMESPACE + "ROLLBACK_MODE";
 
 
         //@formatter:on

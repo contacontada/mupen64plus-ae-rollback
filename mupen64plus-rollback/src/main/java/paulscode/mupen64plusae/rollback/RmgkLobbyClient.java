@@ -917,7 +917,23 @@ public class RmgkLobbyClient {
             r.romName = rom.optString("name", "");
             r.romMd5 = rom.optString("md5", "");
         }
-        r.players = o.getInt("players");
+        // RMG-K's real lobby server sends "players" as a JSON array of seat
+        // objects ({slot, username, userId}), not a plain count - getInt()
+        // would throw here and silently break every ROOM_LIST update. Accept
+        // either shape.
+        Object playersField = o.opt("players");
+        if (playersField instanceof JSONArray) {
+            JSONArray playerArr = (JSONArray) playersField;
+            r.players = playerArr.length();
+            if (r.playerNames.isEmpty()) {
+                for (int i = 0; i < playerArr.length(); i++) {
+                    JSONObject p = playerArr.optJSONObject(i);
+                    if (p != null) r.playerNames.add(p.optString("username", ""));
+                }
+            }
+        } else {
+            r.players = o.optInt("players", 0);
+        }
         r.maxPlayers = o.getInt("maxPlayers");
         r.state = o.optString("state", "");
         r.hasPassword = o.optBoolean("hasPassword", false);

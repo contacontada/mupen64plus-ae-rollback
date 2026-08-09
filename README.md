@@ -1,49 +1,36 @@
-# Mupen64Plus AE Rollback
+# Mupen64Plus-AE
 
-Mupen64Plus AE Rollback is an Android Edition of Mupen64Plus with experimental rollback-netcode support. It combines the Mupen64Plus Android frontend with the rollback module, JNI bridge and GekkoNet networking components included in this repository.
+Mupen64Plus, Android Edition (AE) is an Android user interface for Mupen64Plus.
 
-This repository is a community-maintained fork of [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae). It is not affiliated with the original project unless explicitly stated. For the original project documentation and support channels, see the [official Mupen64Plus AE repository](https://github.com/mupen64plus-ae/mupen64plus-ae).
+Please visit [the official forum](http://www.paulscode.com/forum/index.php) for support and discussion.
 
-## Continuous integration
+[<img src="https://f-droid.org/badge/get-it-on.png"
+      alt="Get it on F-Droid"
+      height="80">](https://f-droid.org/packages/org.mupen64plusae.v3.alpha/)
 
-Every push and pull request starts the Android build workflow. The release APK is uploaded as a GitHub Actions Artifact when the build succeeds.
 
-| Resource | Link |
-|---|---|
-| Repository | [contacontada/mupen64plus-ae-rollback](https://github.com/contacontada/mupen64plus-ae-rollback) |
-| Workflow runs | [GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) |
-| Build status | [![Build Status](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg)](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) |
-| Latest APK Artifact | Open the most recent successful workflow run and download the artifact named `mupen64plus-ae-main-<short-sha>` |
+## Nightly Builds
 
-Artifacts are available from the **Summary** page of each successful workflow run. GitHub requires an authenticated session to download private workflow artifacts, even when the repository itself is public.
+### Download the latest builds from continuous integration:
 
-## Rollback documentation
+| Name           | Status                            | File                                       |
+|----------------|-----------------------------------|--------------------------------------------|
+| Mupen64Plus-AE | [![Build Status][Build]][Actions] | [![Emulator][Download]][mupen64plus-ae]  |
 
-The rollback-specific architecture, build notes and known limitations are described in [ROLLBACK_NETCODE_README.md](ROLLBACK_NETCODE_README.md). The recorded build failures and their fixes are maintained in [BUILD_ERRORS_LOG.md](BUILD_ERRORS_LOG.md) and [erros-e-solucoes.md](erros-e-solucoes.md).
+[Actions]: https://github.com/mupen64plus-ae/mupen64plus-ae/actions/workflows/build.yml
+[Build]: https://github.com/mupen64plus-ae/mupen64plus-ae/actions/workflows/build.yml/badge.svg
+[Download]: https://img.shields.io/badge/Download-blue
+[mupen64plus-ae]: https://github.com/mupen64plus-ae/mupen64plus-ae/releases/download/Pre-release/mupen64plus-ae-master.zip
 
-## Local build
+## Build Instructions
 
-Install [Android Studio](https://developer.android.com/studio), the Android SDK and the NDK version supported by the Gradle configuration. Linux users should also have `file`, `gawk`, a JDK compatible with the workflow, and the standard Android build tools available.
-
-After cloning the repository, run the structural checks and then build the release APK:
-
-```bash
-git clone https://github.com/contacontada/mupen64plus-ae-rollback.git
-cd mupen64plus-ae-rollback
-./verify_build.sh
-./gradlew assemble
-```
-
-The release APK is written to `app/build/outputs/apk/release/Mupen64PlusAE-release.apk` when the build completes successfully. The rollback module can also be built independently with:
-
-```bash
-./gradlew :mupen64plus-rollback:assembleRelease
-```
-
-## Original project
-
-For the upstream Android frontend, visit [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae). For general support and discussion, consult the [official forum](http://www.paulscode.com/forum/index.php).
-
-## License
-
-The project contains code under the licenses of its upstream components. Consult the license files and notices distributed with each component before redistributing binaries.
+1. Download and install the prerequisites
+   - [Android Studio](https://developer.android.com/studio/index.html)
+   - During the installation, make sure the latest SDK and NDK
+   - If running Windows, make sure you install Git, Python, awk and required Microsoft Visual C++ Redistributable (i.e. cmake 3.18.1 requires Microsoft Visual C++ Redistributable 2015) and that the binaries are in your path environment variable.
+2. Clone the mupen64plus-ae repository and initialize the working copy
+   - `git clone https://github.com/mupen64plus-ae/mupen64plus-ae.git`
+3. Open the project using Android Studio
+4. Build and run the app from Android Studio
+   - Select Build --> Make Project to build
+   - Select Run --> Run app to run

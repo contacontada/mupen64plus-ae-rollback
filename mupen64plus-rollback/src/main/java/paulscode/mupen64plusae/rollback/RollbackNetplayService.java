@@ -41,6 +41,68 @@ public class RollbackNetplayService extends Service {
     private int localDelay = 2;
     private int predictionWindow = 7;
 
+    // Full ROM info, set by RollbackNetplayActivity right after binding.
+    // Needed to actually launch GameActivity (load the ROM, start the
+    // core) once a match is found - see RollbackGameBridge.
+    private String romPath = "";
+    private String zipPath = "";
+    private String romMd5 = "";
+    private String romCrc = "";
+    private String romHeaderName = "";
+    private byte romCountryCode = 0;
+    private String romArtPath = "";
+    private String romGoodName = "";
+    private String romDisplayName = "";
+
+    public void setRomInfo(String romPath, String zipPath, String romMd5, String romCrc,
+                            String romHeaderName, byte romCountryCode, String romArtPath,
+                            String romGoodName, String romDisplayName) {
+        this.romPath = romPath != null ? romPath : "";
+        this.zipPath = zipPath != null ? zipPath : "";
+        this.romMd5 = romMd5 != null ? romMd5 : "";
+        this.romCrc = romCrc != null ? romCrc : "";
+        this.romHeaderName = romHeaderName != null ? romHeaderName : "";
+        this.romCountryCode = romCountryCode;
+        this.romArtPath = romArtPath != null ? romArtPath : "";
+        this.romGoodName = romGoodName != null ? romGoodName : "";
+        this.romDisplayName = romDisplayName != null ? romDisplayName : "";
+    }
+
+    /**
+     * Launches the real GameActivity (loads the ROM, starts the core) in
+     * rollback mode, and blocks the calling thread (must be a background
+     * thread) until the core reports ready or the timeout elapses.
+     *
+     * @return null on success, or a human-readable failure reason.
+     */
+    private String startGameForRollback() {
+        if (romPath.isEmpty() || romMd5.isEmpty()) {
+            return "No ROM selected";
+        }
+
+        RollbackGameBridge.beginNewSession();
+
+        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_PATH, romPath);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ZIP_PATH, zipPath);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_MD5, romMd5);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_CRC, romCrc);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_HEADER_NAME, romHeaderName);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_COUNTRY_CODE, romCountryCode);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_ART_PATH, romArtPath);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_GOOD_NAME, romGoodName);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_DISPLAY_NAME, romDisplayName);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.DO_RESTART, false);
+        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROLLBACK_MODE, true);
+        startActivity(intent);
+
+        // Cold start (ROM load + core init) can genuinely take a while on
+        // slower devices - 30s gives real headroom without hanging
+        // forever if something is actually wrong.
+        return RollbackGameBridge.waitForCoreReady(30_000);
+    }
+
     public class LocalBinder extends Binder {
         public RollbackNetplayService getService() {
             return RollbackNetplayService.this;
@@ -190,10 +252,18 @@ public class RollbackNetplayService extends Service {
     public void startDirectP2P(String gameName, int localPlayer, int localPort,
                                String remoteIp, int remotePort, int localDelay) {
         Log.i(TAG, "Starting direct P2P: " + remoteIp + ":" + remotePort);
-        notifyStatus("Connecting P2P...");
+        notifyStatus("Starting game...");
 
         executor.execute(() -> {
             try {
+                String gameStartFailure = startGameForRollback();
+                if (gameStartFailure != null) {
+                    notifyError("Failed to start game: " + gameStartFailure);
+                    return;
+                }
+
+                notifyStatus("Connecting P2P...");
+
                 boolean success = RollbackNative.nativeStartP2PSession(
                     gameName, 2, 4, localPlayer, localPort,
                     remoteIp, remotePort, localDelay, 7);
@@ -418,6 +488,19 @@ public class RollbackNetplayService extends Service {
                 int localPort = lobbyClient.getLocalUdpPort();
                 if (localPort == 0) localPort = 4444;
 
+                notifyStatus("Starting game...");
+
+                // Load the ROM and start the real emulation core (paused,
+                // ready for rollback to drive it frame-by-frame) before
+                // trying to configure rollback mode - previously this
+                // step was entirely missing, so setupRollbackMode() below
+                // always failed because no core was running yet.
+                String gameStartFailure = startGameForRollback();
+                if (gameStartFailure != null) {
+                    notifyError("Failed to start game: " + gameStartFailure);
+                    return;
+                }
+
                 notifyStatus("Starting rollback session...");
 
                 // Initialize the rollback core bridge
@@ -481,6 +564,9 @@ public class RollbackNetplayService extends Service {
     }
 
     private void notifyError(String error) {
+        if (RollbackGameBridge.isRollbackSessionActive()) {
+            RollbackGameBridge.notifyMatchEnded();
+        }
         for (NetplayListener l : listeners) l.onError(error);
     }
 
@@ -504,6 +590,8 @@ public class RollbackNetplayService extends Service {
             Intent overlayIntent = new Intent(this, NetplayOverlayService.class);
             stopService(overlayIntent);
         } catch (Exception e) { /* ignore */ }
+
+        RollbackGameBridge.notifyMatchEnded();
 
         for (NetplayListener l : listeners) l.onMatchFinished();
     }

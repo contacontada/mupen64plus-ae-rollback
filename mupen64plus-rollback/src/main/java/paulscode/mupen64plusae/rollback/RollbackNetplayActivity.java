@@ -90,12 +90,31 @@ public class RollbackNetplayActivity extends AppCompatActivity {
     private List<RmgkLobbyClient.MatchPeer> currentPeers = new ArrayList<>();
     private String romMd5 = "";
     private String romName = "";
+    private String romPath = "";
+    private String zipPath = "";
+    private String romCrc = "";
+    private String romHeaderName = "";
+    private byte romCountryCode = 0;
+    private String romArtPath = "";
+    private String romGoodName = "";
+    private String romDisplayName = "";
 
-    public static void launch(Context context, String romMd5, String romName) {
+    public static void launch(Context context, android.net.Uri romUri, android.net.Uri zipUri,
+                               String romMd5, String romCrc, String romHeaderName,
+                               byte romCountryCode, String romArtPath, String romGoodName,
+                               String romDisplayName) {
         RollbackCrashLogger.install(context);
         Intent intent = new Intent(context, RollbackNetplayActivity.class);
+        intent.putExtra("ROM_PATH", romUri != null ? romUri.toString() : "");
+        intent.putExtra("ZIP_PATH", zipUri != null ? zipUri.toString() : "");
         intent.putExtra("ROM_MD5", romMd5 != null ? romMd5 : "");
-        intent.putExtra("ROM_NAME", romName != null ? romName : "");
+        intent.putExtra("ROM_NAME", romGoodName != null ? romGoodName : "");
+        intent.putExtra("ROM_CRC", romCrc != null ? romCrc : "");
+        intent.putExtra("ROM_HEADER_NAME", romHeaderName != null ? romHeaderName : "");
+        intent.putExtra("ROM_COUNTRY_CODE", romCountryCode);
+        intent.putExtra("ROM_ART_PATH", romArtPath != null ? romArtPath : "");
+        intent.putExtra("ROM_GOOD_NAME", romGoodName != null ? romGoodName : "");
+        intent.putExtra("ROM_DISPLAY_NAME", romDisplayName != null ? romDisplayName : "");
         context.startActivity(intent);
     }
 
@@ -112,6 +131,21 @@ public class RollbackNetplayActivity extends AppCompatActivity {
             if (romMd5 == null) romMd5 = "";
             romName = intent.getStringExtra("ROM_NAME");
             if (romName == null) romName = "";
+            romPath = intent.getStringExtra("ROM_PATH");
+            if (romPath == null) romPath = "";
+            zipPath = intent.getStringExtra("ZIP_PATH");
+            if (zipPath == null) zipPath = "";
+            romCrc = intent.getStringExtra("ROM_CRC");
+            if (romCrc == null) romCrc = "";
+            romHeaderName = intent.getStringExtra("ROM_HEADER_NAME");
+            if (romHeaderName == null) romHeaderName = "";
+            romCountryCode = intent.getByteExtra("ROM_COUNTRY_CODE", (byte) 0);
+            romArtPath = intent.getStringExtra("ROM_ART_PATH");
+            if (romArtPath == null) romArtPath = "";
+            romGoodName = intent.getStringExtra("ROM_GOOD_NAME");
+            if (romGoodName == null) romGoodName = "";
+            romDisplayName = intent.getStringExtra("ROM_DISPLAY_NAME");
+            if (romDisplayName == null) romDisplayName = "";
         }
 
         initViews();
@@ -275,6 +309,8 @@ public class RollbackNetplayActivity extends AppCompatActivity {
             // Apply settings
             netplayService.setLocalDelay(RollbackSettingsActivity.getLocalDelay(RollbackNetplayActivity.this));
             netplayService.setPredictionWindow(RollbackSettingsActivity.getPredictionWindow(RollbackNetplayActivity.this));
+            netplayService.setRomInfo(romPath, zipPath, romMd5, romCrc, romHeaderName,
+                romCountryCode, romArtPath, romGoodName, romDisplayName);
         }
 
         @Override
@@ -367,6 +403,38 @@ public class RollbackNetplayActivity extends AppCompatActivity {
                         matchSubStatusText.setText("Game running with rollback netcode");
                         matchProgress.setVisibility(View.VISIBLE);
                     }
+
+                    // Populate the room's seat list. RMG-K's real lobby
+                    // server sends "players" as an array of
+                    // {slot, username, userId} objects (see RollbackLobbyDialog.cpp,
+                    // onRoomStateChanged, for the reference shape this mirrors).
+                    org.json.JSONArray playersArr = data.optJSONArray("players");
+                    if (playersArr != null) {
+                        currentPeers.clear();
+                        for (int i = 0; i < playersArr.length(); i++) {
+                            JSONObject p = playersArr.optJSONObject(i);
+                            if (p == null) continue;
+                            RmgkLobbyClient.MatchPeer seat = new RmgkLobbyClient.MatchPeer();
+                            seat.slot = p.optInt("slot", i + 1);
+                            seat.username = p.optString("username", "?");
+                            seat.userId = p.optLong("userId", 0);
+                            // publicIp/publicPort/localIp intentionally left
+                            // blank here - those are only known once a match
+                            // actually begins (MATCH_BEGIN), not while just
+                            // seated in the room. The adapter hides the
+                            // endpoint/ping row when publicIp is empty.
+                            currentPeers.add(seat);
+                        }
+                        currentPeers.sort((a, b) -> Integer.compare(a.slot, b.slot));
+                        playerAdapter.notifyDataSetChanged();
+                        matchSubStatusText.setText(
+                            currentPeers.size() + "/" + data.optInt("maxPlayers", currentPeers.size()) + " players seated");
+                    }
+
+                    long hostId = data.optLong("hostId", -1);
+                    boolean iAmHost = serviceBound && hostId != -1
+                        && hostId == netplayService.getLobbyClient().getSelfUserId();
+                    matchStartBtn.setVisibility(iAmHost && "waiting".equals(state) ? View.VISIBLE : View.GONE);
                 } catch (Exception e) { /* ignore */ }
             });
         }
@@ -543,14 +611,29 @@ public class RollbackNetplayActivity extends AppCompatActivity {
         maxPlayersSpinner.setAdapter(spinnerAdapter);
         layout.addView(maxPlayersSpinner);
 
+        TextView passwordLabel = new TextView(this);
+        passwordLabel.setText("Password (optional)");
+        passwordLabel.setTextColor(0xFF9C9897);
+        passwordLabel.setPadding(0, 24, 0, 0);
+        layout.addView(passwordLabel);
+
+        EditText passwordEdit = new EditText(this);
+        passwordEdit.setHint("Leave blank for a public room");
+        passwordEdit.setTextColor(0xFFFFFFFF);
+        passwordEdit.setHintTextColor(0xFF747273);
+        passwordEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        layout.addView(passwordEdit);
+
         builder.setView(layout);
         builder.setPositiveButton("Create", (dialog, which) -> {
             String roomName = nameEdit.getText().toString().trim();
             String rName = romEdit.getText().toString().trim();
             int maxPlayers = maxPlayersSpinner.getSelectedItemPosition() + 2;
+            String password = passwordEdit.getText().toString();
             if (roomName.isEmpty()) roomName = "Room";
             if (rName.isEmpty()) rName = "Unknown ROM";
-            netplayService.createRoom(roomName, rName, romMd5, maxPlayers, 2, 7, null);
+            netplayService.createRoom(roomName, rName, romMd5, maxPlayers, 2, 7,
+                password.isEmpty() ? null : password);
         });
         builder.setNegativeButton("Cancel", null);
         builder.show();
@@ -674,16 +757,27 @@ public class RollbackNetplayActivity extends AppCompatActivity {
             holder.playerSlot.setText("P" + peer.slot);
             holder.playerName.setText(peer.username);
             holder.playerSelf.setVisibility(isSelf ? View.VISIBLE : View.GONE);
-            holder.playerEndpoint.setText(peer.publicIp + ":" + peer.publicPort);
 
-            int ping = serviceBound ? netplayService.getLobbyClient().getMeasuredPing(peer.userId) : -1;
-            holder.pingText.setText(ping >= 0 ? ping + "ms" : "---");
+            boolean hasEndpoint = peer.publicIp != null && !peer.publicIp.isEmpty();
+            if (hasEndpoint) {
+                holder.playerEndpoint.setVisibility(View.VISIBLE);
+                holder.playerEndpoint.setText(peer.publicIp + ":" + peer.publicPort);
 
-            // Color code ping
-            if (ping >= 0) {
-                if (ping < 50) holder.pingText.setTextColor(0xFF00DFDF); // good
-                else if (ping < 100) holder.pingText.setTextColor(0xFFFFFF00); // ok
-                else holder.pingText.setTextColor(0xFFFF4444); // bad
+                int ping = serviceBound ? netplayService.getLobbyClient().getMeasuredPing(peer.userId) : -1;
+                holder.pingText.setVisibility(View.VISIBLE);
+                holder.pingText.setText(ping >= 0 ? ping + "ms" : "---");
+
+                // Color code ping
+                if (ping >= 0) {
+                    if (ping < 50) holder.pingText.setTextColor(0xFF00DFDF); // good
+                    else if (ping < 100) holder.pingText.setTextColor(0xFFFFFF00); // ok
+                    else holder.pingText.setTextColor(0xFFFF4444); // bad
+                }
+            } else {
+                // Just seated in a room, not yet in a match - no P2P
+                // endpoint or ping to show.
+                holder.playerEndpoint.setVisibility(View.GONE);
+                holder.pingText.setVisibility(View.GONE);
             }
         }
 
