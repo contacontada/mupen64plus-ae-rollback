@@ -82,19 +82,25 @@ public class RollbackNetplayService extends Service {
 
         RollbackGameBridge.beginNewSession();
 
-        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
+        // Resolve GameActivity by class name to avoid a compile-time
+        // dependency on the app module (which would create a Gradle
+        // circular dependency). GameActivity is part of the same APK and
+        // is always available at runtime.
+        Intent intent = new Intent();
+        intent.setClassName(this.getPackageName(),
+                "paulscode.android.mupen64plusae.game.GameActivity");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_PATH, romPath);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ZIP_PATH, zipPath);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_MD5, romMd5);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_CRC, romCrc);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_HEADER_NAME, romHeaderName);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_COUNTRY_CODE, romCountryCode);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_ART_PATH, romArtPath);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_GOOD_NAME, romGoodName);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROM_DISPLAY_NAME, romDisplayName);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.DO_RESTART, false);
-        intent.putExtra(paulscode.android.mupen64plusae.ActivityHelper.Keys.ROLLBACK_MODE, true);
+        intent.putExtra(RollbackRomKeys.ROM_PATH, romPath);
+        intent.putExtra(RollbackRomKeys.ZIP_PATH, zipPath);
+        intent.putExtra(RollbackRomKeys.ROM_MD5, romMd5);
+        intent.putExtra(RollbackRomKeys.ROM_CRC, romCrc);
+        intent.putExtra(RollbackRomKeys.ROM_HEADER_NAME, romHeaderName);
+        intent.putExtra(RollbackRomKeys.ROM_COUNTRY_CODE, romCountryCode);
+        intent.putExtra(RollbackRomKeys.ROM_ART_PATH, romArtPath);
+        intent.putExtra(RollbackRomKeys.ROM_GOOD_NAME, romGoodName);
+        intent.putExtra(RollbackRomKeys.ROM_DISPLAY_NAME, romDisplayName);
+        intent.putExtra(RollbackRomKeys.DO_RESTART, false);
+        intent.putExtra(RollbackRomKeys.ROLLBACK_MODE, true);
         startActivity(intent);
 
         // Cold start (ROM load + core init) can genuinely take a while on

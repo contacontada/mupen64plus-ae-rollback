@@ -61,10 +61,4 @@ dependencies {
         exclude group: 'net.java.dev.jna', module: 'jna'
     }
     implementation 'net.java.dev.jna:jna:5.17.0@aar'
-
-    // compileOnly reference to the app module classes (ActivityHelper,
-    // GameActivity) used by the rollback netplay code. compileOnly avoids
-    // a circular runtime dependency because the app module already
-    // depends on this library via implementation project(':mupen64plus-rollback').
-    compileOnly project(':app')
 }
