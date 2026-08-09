@@ -2,6 +2,9 @@ name: Mupen64Plus-AE
 
 on: [push, pull_request]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build
@@ -103,11 +106,6 @@ jobs:
       with:
         path: dist
 
-    - name: Update Git Tag
-      run: |
-        git tag -f Pre-release
-        git push -f origin Pre-release
-
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
@@ -118,3 +116,4 @@ jobs:
         tag: Pre-release
         artifacts: "dist/**/*.apk"
         body: "Nightly build of Mupen64Plus AE Rollback."
+        token: ${{ secrets.GITHUB_TOKEN }}
