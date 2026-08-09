@@ -15,12 +15,11 @@ Mupen64Plus, Android Edition (AE) é uma interface Android para o emulador Mupen
 [Actions]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml
 [Build]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
-[apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/mupen64plus-ae-main.zip
+[apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/Mupen64PlusAE-Rollback.apk
 
-> O APK de cada push é enviado como **artifact do GitHub Actions**. Abra a aba
-> [Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions) deste repositório,
-> selecione a execução (run) correspondente e baixe o artifact `mupen64plus-ae-<branch>-<sha>`
-> para obter o `Mupen64PlusAE-release.apk`.
+> O APK é compilado automaticamente a cada alteração e disponibilizado na seção de
+> [Releases](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release).
+> Você pode baixar a versão mais recente diretamente pelo link de **Download** na tabela acima.
 
 ## O que este repositório inclui
 

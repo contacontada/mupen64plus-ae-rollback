@@ -75,17 +75,22 @@ jobs:
       env:
         SHA: ${{ steps.short-sha.outputs.sha }}
 
+    - name: Prepare APK for release
+      run: |
+        mkdir -p release-assets
+        cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk release-assets/Mupen64PlusAE-Rollback.apk
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: mupen64plus-ae-${{ steps.var.outputs.branch }}-${{ env.SHA }}
-        path: ${{ github.workspace }}/app/build/outputs/apk/release/Mupen64PlusAE-release.apk
+        path: release-assets/Mupen64PlusAE-Rollback.apk
 
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: [build]
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout mupen64plus-ae repo
@@ -98,32 +103,6 @@ jobs:
       with:
         path: dist
 
-    - name: Declare branch name
-      id: branch-name
-      uses: tj-actions/branch-names@v8
-
-    - name: Get branch name
-      id: var
-      run: |
-        echo "branch=${{ steps.branch-name.outputs.current_branch }}" >> $GITHUB_OUTPUT
-
-    - name: Declare sha name
-      uses: benjlevesque/short-sha@v3.0
-      id: short-sha
-      with:
-        length: 7
-
-    - name: Get sha name
-      run: |
-        echo $SHA
-      env:
-        SHA: ${{ steps.short-sha.outputs.sha }}
-
-    - name: Re-zip artifacts
-      run: |
-        cd dist
-        zip -r mupen64plus-ae-${{ steps.var.outputs.branch }}.zip mupen64plus-ae*
-
     - name: Update Git Tag
       run: |
         git tag -f Pre-release
@@ -135,6 +114,7 @@ jobs:
         prerelease: true
         allowUpdates: true
         removeArtifacts: true
-        replacesArtifacts: false
+        replacesArtifacts: true
         tag: Pre-release
-        artifacts: "dist/*.zip"
+        artifacts: "dist/**/*.apk"
+        body: "Nightly build of Mupen64Plus AE Rollback."
