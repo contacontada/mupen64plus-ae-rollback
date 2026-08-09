@@ -624,7 +624,15 @@ public class RollbackNetplayActivity extends AppCompatActivity {
         passwordEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         layout.addView(passwordEdit);
 
-        builder.setView(layout);
+        // Wrapped in a ScrollView: on smaller screens/keyboards open, this
+        // dialog's content can be taller than the visible dialog area, and
+        // a raw LinearLayout content view does NOT scroll on its own -
+        // fields below the fold (like this password field) were
+        // effectively unreachable without this.
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
+        scrollView.addView(layout);
+
+        builder.setView(scrollView);
         builder.setPositiveButton("Create", (dialog, which) -> {
             String roomName = nameEdit.getText().toString().trim();
             String rName = romEdit.getText().toString().trim();
