@@ -1,4 +1,4 @@
-# Mupen64Plus-AE Rollback
+# Mupen64Plus-AE Rollback (Patch 12)
 
 Este repositório é um port do **rollback netcode do RMG-K** para o [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae) (Android Edition). Ele permite jogar online com rollback netcode, com **compatibilidade de lobby com jogadores do RMG-K no PC**.
 
