@@ -4,10 +4,6 @@ Este repositório é um port do **rollback netcode do RMG-K** para o [Mupen64Plu
 
 Mupen64Plus, Android Edition (AE) é uma interface Android para o emulador Mupen64Plus. Para suporte e discussões gerais do emulador, visite [o fórum oficial](http://www.paulscode.com/forum/index.php).
 
-[<img src="https://f-droid.org/badge/get-it-on.png"
-      alt="Get it on F-Droid"
-      height="80">](https://f-droid.org/packages/org.mupen64plusae.v3.alpha/)
-
 ## Nightly Builds
 
 ### Baixe as compilações mais recentes pela integração contínua (GitHub Actions):
