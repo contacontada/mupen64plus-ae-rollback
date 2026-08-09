@@ -3,5 +3,14 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">paulscode.com</domain>
         <domain includeSubdomains="true">zurita.me</domain>
+        <!-- RMG-K's official rollback netplay lobby server (see RMG-K
+             source: LobbyConnectDialog.cpp, kDefaultLobbyUrl). It's plain
+             ws:// (no TLS), which Android blocks by default since API 28
+             unless explicitly allowed here. If you point the app's Lobby
+             Server URL setting at a different self-hosted ws:// server,
+             add its IP/hostname here too - or better, put it behind
+             wss:// (e.g. via a Caddy reverse proxy), which needs no
+             cleartext exception at all. -->
+        <domain includeSubdomains="false">216.128.157.98</domain>
     </domain-config>
 </network-security-config>

@@ -89,3 +89,13 @@ fatal: unable to access 'https://github.com/contacontada/mupen64plus-ae-rollback
 ```
 
 **Solução:** Adicionada a permissão explícita `contents: write` no workflow. Isso permite que o `GITHUB_TOKEN` do job atualize a tag `Pre-release` e que a etapa de Release crie/atualize a release correspondente. O APK já havia sido compilado com sucesso; um novo run será usado para validar a correção completa.
+
+## 11. Integração do patch9
+
+**Descrição:** O pacote `mupen64plus-ae-rollback-fixed_patch9.tar.gz` foi integrado ao repositório. O patch continha versões desatualizadas do `README.md`, `verify_build.sh` e `.github/workflows/build.yml`, que sobrescreveram as correções manuais aplicadas anteriormente.
+
+**Solução:**
+- Re-aplicada a correção no `verify_build.sh` para verificar o Manifesto no módulo de rollback.
+- Re-aplicadas as permissões `contents: write` e a condição da branch `main` no workflow.
+- Restaurado o README profissional com as tabelas de links para o CI.
+- Adicionada a nova configuração de segurança de rede (`network_security_config.xml`) incluída no patch9.

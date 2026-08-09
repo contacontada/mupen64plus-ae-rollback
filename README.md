@@ -13,10 +13,9 @@ Every push and pull request starts the Android build workflow. The release APK i
 | Repository | [contacontada/mupen64plus-ae-rollback](https://github.com/contacontada/mupen64plus-ae-rollback) |
 | Workflow runs | [GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) |
 | Build status | [![Build Status](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg)](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) |
-| Latest APK Artifact | [`mupen64plus-ae-main-1328e29`](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31274731391/artifacts/9026835826) |
-| Pre-release package | [Download `mupen64plus-ae-main.zip`](https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/mupen64plus-ae-main.zip) |
+| Latest APK Artifact | Open the most recent successful workflow run and download the artifact named `mupen64plus-ae-main-<short-sha>` |
 
-The final successful run is [31274731391](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31274731391). Its APK Artifact is [mupen64plus-ae-main-1328e29](https://github.com/contacontada/mupen64plus-ae-rollback/actions/runs/31274731391/artifacts/9026835826), and the generated prerelease package is available from [Pre-release](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release). GitHub requires an authenticated session to download workflow artifacts, while the prerelease package can be downloaded directly from the public release page.
+Artifacts are available from the **Summary** page of each successful workflow run. GitHub requires an authenticated session to download private workflow artifacts, even when the repository itself is public.
 
 ## Rollback documentation
 
