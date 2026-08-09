@@ -45,6 +45,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends file gawk
 
+    - name: Restore executable permissions
+      run: |
+        chmod +x gradlew || true
+        find . -name "*.sh" -path "*mupen64plus*" -exec chmod +x {} \; 2>/dev/null || true
+        chmod -R +x gradlew build_rollback.sh verify_build.sh 2>/dev/null || true
+
     - name: Build artifact
       run: ./gradlew assemble
 
