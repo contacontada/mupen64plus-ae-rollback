@@ -78,16 +78,17 @@ jobs:
       env:
         SHA: ${{ steps.short-sha.outputs.sha }}
 
-    - name: Prepare APK for release
+    - name: Prepare APK and source archive for release
       run: |
         mkdir -p release-assets
         cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk release-assets/Mupen64PlusAE-Rollback.apk
+        tar --exclude=.git --exclude=release-assets -czf release-assets/mupen64plus-ae-rollback-patch13.tar.gz .
 
-    - name: Upload artifact
+    - name: Upload APK and source archive
       uses: actions/upload-artifact@v4
       with:
         name: mupen64plus-ae-${{ steps.var.outputs.branch }}-${{ env.SHA }}
-        path: release-assets/Mupen64PlusAE-Rollback.apk
+        path: release-assets/*
 
   release:
     name: Release
@@ -114,6 +115,6 @@ jobs:
         removeArtifacts: true
         replacesArtifacts: true
         tag: Pre-release
-        artifacts: "dist/**/*.apk"
+        artifacts: "dist/**/*"
         body: "Nightly build of Mupen64Plus AE Rollback."
         token: ${{ secrets.GITHUB_TOKEN }}
