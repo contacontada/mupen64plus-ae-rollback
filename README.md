@@ -1,58 +1,65 @@
-# Mupen64Plus-AE Rollback (Patch 12)
+# Mupen64Plus-AE Rollback — Patch 13
 
-Este repositório é um port do **rollback netcode do RMG-K** para o [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae) (Android Edition). Ele permite jogar online com rollback netcode, com **compatibilidade de lobby com jogadores do RMG-K no PC**.
+Este repositório é um port do **rollback netcode do RMG-K** para o [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae) (Android Edition). Ele permite partidas online com rollback netcode e compatibilidade de lobby com jogadores do RMG-K no PC.
 
-Mupen64Plus, Android Edition (AE) é uma interface Android para o emulador Mupen64Plus. Para suporte e discussões gerais do emulador, visite [o fórum oficial](http://www.paulscode.com/forum/index.php).
+> **Versão atual:** Patch 13. Esta atualização inclui as correções de build e de publicação automática da Release aplicadas ao projeto.
 
-## Nightly Builds
+Mupen64Plus, Android Edition (AE) é uma interface Android para o emulador Mupen64Plus. Para suporte e discussões gerais do emulador, consulte o [fórum oficial](http://www.paulscode.com/forum/index.php).
 
-### Baixe as compilações mais recentes pela integração contínua (GitHub Actions):
+## Download do APK
 
-| Nome           | Status                            | Arquivo                                    |
-|----------------|-----------------------------------|--------------------------------------------|
-| Mupen64Plus-AE Rollback | [![Build Status][Build]][Actions] | [![Emulator][Download]][apk]  |
+O APK é compilado automaticamente pelo [GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) a cada push na branch `main`. A execução publica o APK como Artifact e também atualiza a Release prévia `Pre-release`.
+
+| Projeto | Status da compilação | Download |
+|---|---|---|
+| Mupen64Plus-AE Rollback | [![Build Status][Build]][Actions] | [![Download][Download]][apk] |
+
+O arquivo de projeto atualizado do Patch 13 está disponível na [Release `Pre-release`](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release). Os APKs gerados podem ser baixados na mesma Release ou na aba [Artifacts](https://github.com/contacontada/mupen64plus-ae-rollback/actions).
 
 [Actions]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml
 [Build]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
 [apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/Mupen64PlusAE-Rollback.apk
 
-> O APK é compilado automaticamente a cada alteração e disponibilizado na seção de
-> [Releases](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release).
-> Você pode baixar a versão mais recente diretamente pelo link de **Download** na tabela acima.
-
 ## O que este repositório inclui
 
-- **Rollback netcode (nativo)**: `mupen64plus-core` com suporte a rollback (comandos `M64CMD_ROLLBACK_*`), modo de emulação determinística, callbacks de input por frame e dynarec rollback-aware (ARM/ARM64/x86/x86_64)
-- **GekkoNet**: biblioteca de rollback netcode com gerenciamento de sessão, sincronização de input entre peers e save/load de estado
-- **Compatibilidade de lobby com RMG-K**: protocolo WebSocket do lobby, anchor UDP para NAT traversal, NAT punch-through, criação/entrada em salas, quick match e chat (módulo `mupen64plus-rollback`)
-- **Interface Android**: `RollbackNetplayActivity` (UI de lobby, salas e status da partida) e `RollbackNetplayService` (serviço Android que gerencia a conexão e o ciclo de vida da partida)
+O projeto inclui suporte nativo a rollback no `mupen64plus-core`, com os comandos `M64CMD_ROLLBACK_*`, modo de emulação determinística, callbacks de input por frame e dynarec rollback-aware para ARM, ARM64, x86 e x86_64. Também inclui a biblioteca GekkoNet, o módulo `mupen64plus-rollback` com integração de lobby RMG-K e a interface Android composta pela `RollbackNetplayActivity` e pelo `RollbackNetplayService`.
 
-Para detalhes completos da arquitetura e da compatibilidade com o RMG-K, veja [ROLLBACK_NETCODE_README.md](ROLLBACK_NETCODE_README.md).
+Para detalhes da arquitetura e da compatibilidade com o RMG-K, consulte [ROLLBACK_NETCODE_README.md](ROLLBACK_NETCODE_README.md).
 
-## Instruções de Build
+## Instruções de build
 
-1. Instale os pré-requisitos
-   - [Android Studio](https://developer.android.com/studio/index.html)
-   - Durante a instalação, garanta os SDK e NDK mais recentes (o projeto usa compileSdk/NDK definidos nos `build.gradle` dos módulos)
-   - No Windows, instale Git, Python, awk e o Microsoft Visual C++ Redistributable necessário
-2. Clone este repositório
-   - `git clone https://github.com/contacontada/mupen64plus-ae-rollback.git`
-3. Abra o projeto no Android Studio
-4. Compile e execute o aplicativo
-   - Selecione Build --> Make Project para compilar
-   - Selecione Run --> Run app para executar
+1. Instale o [Android Studio](https://developer.android.com/studio/index.html) e os componentes de SDK e NDK compatíveis com os arquivos `build.gradle` do projeto.
+2. Clone o repositório:
 
-O GitHub Actions deste repositório também compila o APK automaticamente a cada push
-(`.github/workflows/build.yml`).
+   ```bash
+   git clone https://github.com/contacontada/mupen64plus-ae-rollback.git
+   cd mupen64plus-ae-rollback
+   ```
+
+3. No Linux ou macOS, torne o wrapper executável e compile o projeto:
+
+   ```bash
+   chmod +x gradlew build_rollback.sh verify_build.sh
+   ./gradlew assemble
+   ```
+
+4. Para compilar pelo Android Studio, abra a pasta do projeto, selecione **Build > Make Project** e depois **Run > Run app**.
+
+No Windows, instale também Git, Python, awk e o Microsoft Visual C++ Redistributable exigido pelas ferramentas nativas. O workflow `.github/workflows/build.yml` restaura as permissões dos scripts automaticamente no ambiente do GitHub Actions.
 
 ## Estrutura
 
 | Diretório | Descrição |
-|-----------|-----------|
-| `app` | Aplicativo Android principal (UI do emulador) |
-| `mupen64plus-rollback` | Módulo de rollback netcode e lobby RMG-K (Java + JNI) |
-| `mupen64plus-core` | Core do emulador com suporte a rollback |
-| `ae-bridge`, `miniupnp-bridge` | Módulos de bridge |
-| `mupen64plus-*` | Módulos de plugins (áudio, vídeo, input, RSP) |
-| `ndkLibs` | Bibliotecas nativas de terceiros |
+|---|---|
+| `app` | Aplicativo Android principal e interface do emulador. |
+| `mupen64plus-rollback` | Módulo de rollback netcode e lobby RMG-K, com Java e JNI. |
+| `mupen64plus-core` | Core do emulador com suporte a rollback. |
+| `ae-bridge` e `miniupnp-bridge` | Módulos de integração e bridge. |
+| `mupen64plus-*` | Plugins de áudio, vídeo, input e RSP. |
+| `ndkLibs` | Bibliotecas nativas de terceiros. |
+| `.github/workflows/build.yml` | Compilação, upload do Artifact e atualização da Release `Pre-release`. |
+
+## Licença
+
+Consulte o arquivo [gpl-license](gpl-license) para os termos de licença do projeto e de seus componentes licenciados sob GPL.
