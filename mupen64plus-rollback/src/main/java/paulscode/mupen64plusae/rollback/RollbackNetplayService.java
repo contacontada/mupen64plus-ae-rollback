@@ -82,7 +82,8 @@ public class RollbackNetplayService extends Service {
 
         RollbackGameBridge.beginNewSession();
 
-        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
+        Intent intent = new Intent();
+        intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(RollbackRomKeys.ROM_PATH, romPath);
         intent.putExtra(RollbackRomKeys.ZIP_PATH, zipPath);
