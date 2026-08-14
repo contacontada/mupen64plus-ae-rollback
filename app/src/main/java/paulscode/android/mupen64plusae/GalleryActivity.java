@@ -973,8 +973,8 @@ public class GalleryActivity extends AppCompatActivity implements GameSidebarAct
             // found - see RollbackGameBridge)
             paulscode.mupen64plusae.rollback.RollbackNetplayActivity.launch(
                 GalleryActivity.this,
-                item.romUri != null ? Uri.parse(item.romUri) : null,
-                item.zipUri != null ? Uri.parse(item.zipUri) : null,
+                item.romUri,
+                item.zipUri,
                 item.md5, item.crc,
                 item.headerName, item.countryCode.getValue(), item.artPath,
                 item.goodName, item.displayName);
