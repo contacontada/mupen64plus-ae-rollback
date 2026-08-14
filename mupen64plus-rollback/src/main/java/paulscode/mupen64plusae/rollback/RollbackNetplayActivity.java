@@ -99,14 +99,14 @@ public class RollbackNetplayActivity extends AppCompatActivity {
     private String romGoodName = "";
     private String romDisplayName = "";
 
-    public static void launch(Context context, android.net.Uri romUri, android.net.Uri zipUri,
+    public static void launch(Context context, String romUri, String zipUri,
                                String romMd5, String romCrc, String romHeaderName,
                                byte romCountryCode, String romArtPath, String romGoodName,
                                String romDisplayName) {
         RollbackCrashLogger.install(context);
         Intent intent = new Intent(context, RollbackNetplayActivity.class);
-        intent.putExtra("ROM_PATH", romUri != null ? romUri.toString() : "");
-        intent.putExtra("ZIP_PATH", zipUri != null ? zipUri.toString() : "");
+        intent.putExtra("ROM_PATH", romUri != null ? romUri : "");
+        intent.putExtra("ZIP_PATH", zipUri != null ? zipUri : "");
         intent.putExtra("ROM_MD5", romMd5 != null ? romMd5 : "");
         intent.putExtra("ROM_NAME", romGoodName != null ? romGoodName : "");
         intent.putExtra("ROM_CRC", romCrc != null ? romCrc : "");
@@ -473,8 +473,17 @@ public class RollbackNetplayActivity extends AppCompatActivity {
 
         @Override
         public void onError(String error) {
-            runOnUiThread(() -> Toast.makeText(RollbackNetplayActivity.this,
-                error, Toast.LENGTH_LONG).show());
+            runOnUiThread(() -> {
+                Toast.makeText(RollbackNetplayActivity.this, error, Toast.LENGTH_LONG).show();
+                // Don't leave the match panel stuck showing "Connecting..."
+                // forever when something failed - that looks exactly like
+                // an infinite hang even though the attempt already gave up.
+                if (matchPanel.getVisibility() == View.VISIBLE) {
+                    matchStatusText.setText("Connection Failed");
+                    matchSubStatusText.setText(error);
+                    matchProgress.setVisibility(View.GONE);
+                }
+            });
         }
 
         @Override

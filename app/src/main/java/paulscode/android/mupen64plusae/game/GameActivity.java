@@ -268,6 +268,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
+        paulscode.mupen64plusae.rollback.RollbackCrashLogger.install(this);
         super.onCreate(savedInstanceState);
         super.setTheme( androidx.appcompat.R.style.Theme_AppCompat_NoActionBar );
 
@@ -317,8 +318,17 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
             RollbackGameBridge.setMatchEndListener(() -> runOnUiThread(this::finish));
         }
 
-        if( TextUtils.isEmpty( mRomPath ) || TextUtils.isEmpty( mRomMd5 ) )
+        if( TextUtils.isEmpty( mRomPath ) || TextUtils.isEmpty( mRomMd5 ) ) {
+            if (mIsRollbackMode) {
+                String reason = TextUtils.isEmpty(mRomPath)
+                    ? "ROM path was empty (mRomPath)"
+                    : "ROM MD5 was empty (mRomMd5)";
+                Log.e(TAG, "Rollback mode: aborting launch - " + reason);
+                RollbackGameBridge.notifyCoreStartFailed(reason);
+            }
             finish();
+            return;
+        }
 
         // Get app data and user preferences
         mGlobalPrefs = new GlobalPrefs( this, mAppData );
