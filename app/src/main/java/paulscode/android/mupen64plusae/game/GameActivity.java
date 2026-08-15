@@ -174,6 +174,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     private boolean mIsNetplayServer = false;
     private boolean mIsRollbackMode = false;
     private boolean mRollbackReadySignaled = false;
+    private android.content.BroadcastReceiver mRollbackMatchEndReceiver;
     private boolean mForceExit = false;
     private int mServerPort = 0;
 
@@ -315,7 +316,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         mIsRollbackMode = extras.getBoolean( ActivityHelper.Keys.ROLLBACK_MODE, false );
 
         if (mIsRollbackMode) {
-            RollbackGameBridge.setMatchEndListener(() -> runOnUiThread(this::finish));
+            mRollbackMatchEndReceiver = RollbackGameBridge.registerMatchEndReceiver(
+                this, () -> runOnUiThread(this::finish));
         }
 
         if( TextUtils.isEmpty( mRomPath ) || TextUtils.isEmpty( mRomMd5 ) ) {
@@ -324,7 +326,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
                     ? "ROM path was empty (mRomPath)"
                     : "ROM MD5 was empty (mRomMd5)";
                 Log.e(TAG, "Rollback mode: aborting launch - " + reason);
-                RollbackGameBridge.notifyCoreStartFailed(reason);
+                RollbackGameBridge.notifyCoreStartFailed(this, reason);
             }
             finish();
             return;
@@ -667,6 +669,13 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
 
         super.onDestroy();
 
+        if (mRollbackMatchEndReceiver != null) {
+            try {
+                unregisterReceiver(mRollbackMatchEndReceiver);
+            } catch (Exception e) { /* already unregistered */ }
+            mRollbackMatchEndReceiver = null;
+        }
+
         // This apparently can happen on rare occasion, not sure how, so protect against it
         if(mHandler != null)
         {
@@ -965,7 +974,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
                 mCoreFragment.pauseEmulator();
                 if (!mRollbackReadySignaled) {
                     mRollbackReadySignaled = true;
-                    RollbackGameBridge.notifyCoreReady();
+                    RollbackGameBridge.notifyCoreReady(this);
                 }
             } else if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerOpenState) {
                 mCoreFragment.pauseEmulator();

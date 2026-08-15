@@ -80,7 +80,7 @@ public class RollbackNetplayService extends Service {
             return "No ROM selected";
         }
 
-        RollbackGameBridge.beginNewSession();
+        Object waitHandle = RollbackGameBridge.beginWaitForCoreReady(this);
 
         Intent intent = new Intent();
         intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
@@ -101,7 +101,7 @@ public class RollbackNetplayService extends Service {
         // Cold start (ROM load + core init) can genuinely take a while on
         // slower devices - 30s gives real headroom without hanging
         // forever if something is actually wrong.
-        return RollbackGameBridge.waitForCoreReady(30_000);
+        return RollbackGameBridge.awaitCoreReady(waitHandle, 30_000);
     }
 
     public class LocalBinder extends Binder {
@@ -566,7 +566,7 @@ public class RollbackNetplayService extends Service {
 
     private void notifyError(String error) {
         if (RollbackGameBridge.isRollbackSessionActive()) {
-            RollbackGameBridge.notifyMatchEnded();
+            RollbackGameBridge.notifyMatchEnded(this);
         }
         for (NetplayListener l : listeners) l.onError(error);
     }
@@ -592,7 +592,7 @@ public class RollbackNetplayService extends Service {
             stopService(overlayIntent);
         } catch (Exception e) { /* ignore */ }
 
-        RollbackGameBridge.notifyMatchEnded();
+            RollbackGameBridge.notifyMatchEnded(this);
 
         for (NetplayListener l : listeners) l.onMatchFinished();
     }
