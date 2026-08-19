@@ -66,6 +66,8 @@ public class RollbackNetplayService extends Service {
         this.romArtPath = romArtPath != null ? romArtPath : "";
         this.romGoodName = romGoodName != null ? romGoodName : "";
         this.romDisplayName = romDisplayName != null ? romDisplayName : "";
+        RollbackDebugLog.log(this, "RollbackNetplayService",
+            "setRomInfo() called: romPath='" + this.romPath + "' romMd5='" + this.romMd5 + "'");
     }
 
     /**
@@ -76,7 +78,13 @@ public class RollbackNetplayService extends Service {
      * @return null on success, or a human-readable failure reason.
      */
     private String startGameForRollback() {
+        RollbackDebugLog.log(this, "RollbackNetplayService",
+            "startGameForRollback() ENTER: romPath='" + romPath + "' romMd5='" + romMd5
+            + "' zipPath='" + zipPath + "' romGoodName='" + romGoodName + "'");
+
         if (romPath.isEmpty() || romMd5.isEmpty()) {
+            RollbackDebugLog.log(this, "RollbackNetplayService",
+                "ABORT: No ROM selected (romPath or romMd5 empty)");
             return "No ROM selected";
         }
 
@@ -96,12 +104,25 @@ public class RollbackNetplayService extends Service {
         intent.putExtra(RollbackRomKeys.ROM_DISPLAY_NAME, romDisplayName);
         intent.putExtra(RollbackRomKeys.DO_RESTART, false);
         intent.putExtra(RollbackRomKeys.ROLLBACK_MODE, true);
-        startActivity(intent);
 
-        // Cold start (ROM load + core init) can genuinely take a while on
-        // slower devices - 30s gives real headroom without hanging
-        // forever if something is actually wrong.
-        return RollbackGameBridge.awaitCoreReady(waitHandle, 30_000);
+        RollbackDebugLog.log(this, "RollbackNetplayService", "Calling startActivity(GameActivity)");
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            RollbackDebugLog.error(this, "RollbackNetplayService", "startActivity() threw", e);
+            return "startActivity() threw: " + e.getMessage();
+        }
+        RollbackDebugLog.log(this, "RollbackNetplayService",
+            "startActivity() returned normally, now waiting for core ready...");
+
+        // Cold start (ROM load + core init, in a *separate process* -
+        // GameActivity runs in :EmulationProcess) can genuinely take a
+        // while on slower devices - 30s gives real headroom without
+        // hanging forever if something is actually wrong.
+        String result = RollbackGameBridge.awaitCoreReady(waitHandle, 30_000);
+        RollbackDebugLog.log(this, "RollbackNetplayService",
+            "awaitCoreReady() returned: " + (result == null ? "SUCCESS" : result));
+        return result;
     }
 
     public class LocalBinder extends Binder {
@@ -565,6 +586,7 @@ public class RollbackNetplayService extends Service {
     }
 
     private void notifyError(String error) {
+        RollbackDebugLog.log(this, "RollbackNetplayService", "notifyError: " + error);
         if (RollbackGameBridge.isRollbackSessionActive()) {
             RollbackGameBridge.notifyMatchEnded(this);
         }
@@ -592,7 +614,7 @@ public class RollbackNetplayService extends Service {
             stopService(overlayIntent);
         } catch (Exception e) { /* ignore */ }
 
-            RollbackGameBridge.notifyMatchEnded(this);
+        RollbackGameBridge.notifyMatchEnded(this);
 
         for (NetplayListener l : listeners) l.onMatchFinished();
     }

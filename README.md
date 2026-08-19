@@ -1,20 +1,20 @@
-# Mupen64Plus-AE Rollback — Patch 15
+# Mupen64Plus-AE Rollback — Patch 16
 
 Este repositório é um port do **rollback netcode do RMG-K** para o [Mupen64Plus AE](https://github.com/mupen64plus-ae/mupen64plus-ae) (Android Edition). Ele permite partidas online com rollback netcode e compatibilidade de lobby com jogadores do RMG-K no PC.
 
-> **Versão atual:** Patch 15. Esta atualização corrige a comunicação entre processos da GameActivity e do serviço de rollback por broadcasts Android, melhora a espera pelo core pronto e mantém as correções de build e publicação automatizada introduzidas nos patches anteriores.
+> **Versão atual:** Patch 16. Esta atualização adiciona diagnóstico persistente entre processos, visualização/cópia do log pela interface de rollback e logs detalhados da inicialização do core, preservando os broadcasts e as correções de build dos patches anteriores.
 
 Mupen64Plus, Android Edition (AE) é uma interface Android para o emulador Mupen64Plus. Para suporte e discussões gerais do emulador, consulte o [fórum oficial](http://www.paulscode.com/forum/index.php).
 
 ## Download do APK
 
-O APK é compilado automaticamente pelo [GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) a cada push na branch `main`. A execução publica o APK como Artifact e também atualiza a Release prévia `Pre-release` com o APK e o arquivo de projeto do Patch 15.
+O APK é compilado automaticamente pelo [GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml) a cada push na branch `main`. A execução publica o APK como Artifact e também atualiza a Release prévia `Pre-release` com o APK e o arquivo de projeto do Patch 16.
 
 | Projeto | Status da compilação | Download |
 |---|---|---|
 | Mupen64Plus-AE Rollback | [![Build Status][Build]][Actions] | [![Download][Download]][apk] |
 
-O APK e o arquivo `mupen64plus-ae-rollback-patch15.tar.gz` estão disponíveis na [Release `Pre-release`](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release). Os artefatos gerados podem ser baixados na [execução do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions) correspondente ao commit mais recente.
+O APK e o arquivo `mupen64plus-ae-rollback-patch16.tar.gz` estão disponíveis na [Release `Pre-release`](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release). Os artefatos gerados podem ser baixados na [execução do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions) correspondente ao commit mais recente.
 
 [Actions]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml
 [Build]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg
@@ -25,7 +25,7 @@ O APK e o arquivo `mupen64plus-ae-rollback-patch15.tar.gz` estão disponíveis n
 
 O projeto inclui suporte nativo a rollback no `mupen64plus-core`, com os comandos `M64CMD_ROLLBACK_*`, modo de emulação determinística, callbacks de input por frame e dynarec rollback-aware para ARM, ARM64, x86 e x86_64. Também inclui a biblioteca GekkoNet, o módulo `mupen64plus-rollback` com integração de lobby RMG-K e a interface Android composta pela `RollbackNetplayActivity` e pelo `RollbackNetplayService`.
 
-O Patch 14 adiciona o `RollbackCrashLogger`, que grava exceções não tratadas em `rollback_crash.txt` no diretório de arquivos externos do aplicativo. O Patch 15 acrescenta broadcasts internos para sincronizar a inicialização do core entre processos, notificar falhas de startup e encerrar a GameActivity quando a partida termina.
+O Patch 14 adiciona o `RollbackCrashLogger`, que grava exceções não tratadas em `rollback_crash.txt` no diretório de arquivos externos do aplicativo. O Patch 15 acrescenta broadcasts internos para sincronizar a inicialização do core entre processos, notificar falhas de startup e encerrar a GameActivity quando a partida termina. O Patch 16 adiciona o `RollbackDebugLog`, que grava `rollback_debug.log` com limite de 512 KB, além do item **Debug Log** na tela de rollback para visualizar, copiar e limpar o diagnóstico.
 
 Para detalhes da arquitetura e da compatibilidade com o RMG-K, consulte [ROLLBACK_NETCODE_README.md](ROLLBACK_NETCODE_README.md).
 

@@ -270,6 +270,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
         paulscode.mupen64plusae.rollback.RollbackCrashLogger.install(this);
+        paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+            "onCreate() ENTER, intent=" + getIntent());
         super.onCreate(savedInstanceState);
         super.setTheme( androidx.appcompat.R.style.Theme_AppCompat_NoActionBar );
 
@@ -291,6 +293,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         final Bundle extras = this.getIntent().getExtras();
         if( extras == null )
         {
+            paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                "ABORT: getIntent().getExtras() was null");
             finish();
             return;
         }
@@ -315,6 +319,11 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         mIsNetplayServer = extras.getBoolean( ActivityHelper.Keys.NETPLAY_SERVER, false );
         mIsRollbackMode = extras.getBoolean( ActivityHelper.Keys.ROLLBACK_MODE, false );
 
+        paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+            "extras read: mIsRollbackMode=" + mIsRollbackMode
+            + " mRomPath='" + mRomPath + "' mRomMd5='" + mRomMd5 + "'"
+            + " mZipPath='" + mZipPath + "' mRomGoodName='" + mRomGoodName + "'");
+
         if (mIsRollbackMode) {
             mRollbackMatchEndReceiver = RollbackGameBridge.registerMatchEndReceiver(
                 this, () -> runOnUiThread(this::finish));
@@ -325,7 +334,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
                 String reason = TextUtils.isEmpty(mRomPath)
                     ? "ROM path was empty (mRomPath)"
                     : "ROM MD5 was empty (mRomMd5)";
-                Log.e(TAG, "Rollback mode: aborting launch - " + reason);
+                paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                    "ABORT: " + reason);
                 RollbackGameBridge.notifyCoreStartFailed(this, reason);
             }
             finish();
@@ -561,6 +571,11 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     {
         super.onStart();
         Log.i(TAG, "onStart");
+        if (mIsRollbackMode) {
+            paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                "onStart() ENTER, mCoreFragment=" + mCoreFragment
+                + " IsInProgress=" + (mCoreFragment != null ? mCoreFragment.IsInProgress() : "n/a"));
+        }
 
         final FragmentManager fm = this.getSupportFragmentManager();
 
@@ -577,6 +592,10 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         if(mCoreFragment != null)
         {
             if (!mCoreFragment.IsInProgress()) {
+                if (mIsRollbackMode) {
+                    paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                        "Calling mCoreFragment.startCore()");
+                }
                 mCoreFragment.startCore(mGlobalPrefs, mGamePrefs, mRomGoodName, mRomDisplayName, mRomPath, mZipPath,
                         mRomMd5, mRomCrc, mRomHeaderName, mRomCountryCode, mRomArtPath, mDoRestart,
                         mDisplayResolutionData.getResolutionWidth(mGamePrefs.verticalRenderResolution),
@@ -961,6 +980,11 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
 
     private void tryRunning()
     {
+        if (mIsRollbackMode) {
+            paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                "tryRunning() called, hasServiceStarted=" + mCoreFragment.hasServiceStarted()
+                + " mRollbackReadySignaled=" + mRollbackReadySignaled);
+        }
         if (mCoreFragment.hasServiceStarted()) {
             mGameSurface.setSurfaceTexture(mCoreFragment.getSurfaceTexture());
 
@@ -974,6 +998,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
                 mCoreFragment.pauseEmulator();
                 if (!mRollbackReadySignaled) {
                     mRollbackReadySignaled = true;
+                    paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                        "Sending notifyCoreReady()");
                     RollbackGameBridge.notifyCoreReady(this);
                 }
             } else if (mDrawerLayout.isDrawerOpen(GravityCompat.START) || mDrawerOpenState) {
@@ -1011,6 +1037,10 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     public void onCoreServiceStarted()
     {
         Log.i(TAG, "onCoreServiceStarted");
+        if (mIsRollbackMode) {
+            paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
+                "onCoreServiceStarted() ENTER");
+        }
 
         if(mCoreFragment == null) return;
 

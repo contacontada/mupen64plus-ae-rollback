@@ -239,7 +239,8 @@ public class RollbackNetplayActivity extends AppCompatActivity {
             "Quick Match", "Auto-match with another player",
             "Create Room", "Host a new game room",
             "Direct P2P", "Connect directly by IP address",
-            "Settings", "Netplay configuration"
+            "Settings", "Netplay configuration",
+            "Debug Log", "View and copy diagnostic log"
         };
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
@@ -282,8 +283,42 @@ public class RollbackNetplayActivity extends AppCompatActivity {
                 case 2: onCreateRoom(); break;
                 case 3: onDirectP2P(); break;
                 case 4: RollbackSettingsActivity.launch(RollbackNetplayActivity.this); break;
+                case 5: showDebugLog(); break;
             }
         });
+    }
+
+    private void showDebugLog() {
+        String logText = RollbackDebugLog.readAll(this);
+
+        TextView logView = new TextView(this);
+        logView.setText(logText);
+        logView.setTextIsSelectable(true);
+        logView.setTextColor(0xFFFFFFFF);
+        logView.setTextSize(11);
+        logView.setTypeface(android.graphics.Typeface.MONOSPACE);
+        logView.setPadding(24, 24, 24, 24);
+
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
+        scrollView.addView(logView);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Debug Log");
+        builder.setView(scrollView);
+        builder.setPositiveButton("Copy All", (dialog, which) -> {
+            android.content.ClipboardManager clipboard =
+                (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newPlainText(
+                "Rollback Debug Log", logText);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "Log copied to clipboard", Toast.LENGTH_SHORT).show();
+        });
+        builder.setNeutralButton("Clear", (dialog, which) -> {
+            RollbackDebugLog.clear(this);
+            Toast.makeText(this, "Log cleared", Toast.LENGTH_SHORT).show();
+        });
+        builder.setNegativeButton("Close", null);
+        builder.show();
     }
 
     private void initRecyclerViews() {

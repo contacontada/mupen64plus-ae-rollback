@@ -63,6 +63,7 @@ public final class RollbackGameBridge {
     /** Broadcasts that the core is loaded, paused, and ready for rollback. */
     public static void notifyCoreReady(Context context) {
         Log.i(TAG, "Broadcasting core ready");
+        RollbackDebugLog.log(context, TAG, "Sending broadcast: " + ACTION_CORE_READY);
         Intent intent = new Intent(ACTION_CORE_READY);
         intent.setPackage(context.getPackageName());
         context.sendBroadcast(intent);
@@ -105,6 +106,7 @@ public final class RollbackGameBridge {
      */
     public static Object beginWaitForCoreReady(Context context) {
         sRollbackSessionActive = true;
+        RollbackDebugLog.log(context, TAG, "beginWaitForCoreReady() registering receiver");
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<String> failureReason = new AtomicReference<>(null);
@@ -112,6 +114,7 @@ public final class RollbackGameBridge {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ctx, Intent intent) {
+                RollbackDebugLog.log(ctx, TAG, "Received broadcast: " + intent.getAction());
                 if (ACTION_CORE_START_FAILED.equals(intent.getAction())) {
                     failureReason.set(intent.getStringExtra(EXTRA_REASON));
                 }
