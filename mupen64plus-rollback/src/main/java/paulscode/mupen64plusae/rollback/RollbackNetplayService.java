@@ -93,17 +93,16 @@ public class RollbackNetplayService extends Service {
         Intent intent = new Intent();
         intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(RollbackRomKeys.ROM_PATH, romPath);
-        intent.putExtra(RollbackRomKeys.ZIP_PATH, zipPath);
-        intent.putExtra(RollbackRomKeys.ROM_MD5, romMd5);
-        intent.putExtra(RollbackRomKeys.ROM_CRC, romCrc);
-        intent.putExtra(RollbackRomKeys.ROM_HEADER_NAME, romHeaderName);
-        intent.putExtra(RollbackRomKeys.ROM_COUNTRY_CODE, romCountryCode);
-        intent.putExtra(RollbackRomKeys.ROM_ART_PATH, romArtPath);
-        intent.putExtra(RollbackRomKeys.ROM_GOOD_NAME, romGoodName);
-        intent.putExtra(RollbackRomKeys.ROM_DISPLAY_NAME, romDisplayName);
-        intent.putExtra(RollbackRomKeys.DO_RESTART, false);
-        intent.putExtra(RollbackRomKeys.ROLLBACK_MODE, true);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_PATH, romPath);
+        intent.putExtra(RollbackGameLaunchKeys.ZIP_PATH, zipPath);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_MD5, romMd5);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_CRC, romCrc);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_HEADER_NAME, romHeaderName);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_COUNTRY_CODE, romCountryCode);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_ART_PATH, romArtPath);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_GOOD_NAME, romGoodName);
+        intent.putExtra(RollbackGameLaunchKeys.ROM_DISPLAY_NAME, romDisplayName);
+        intent.putExtra(RollbackGameLaunchKeys.ROLLBACK_MODE, true);
 
         RollbackDebugLog.log(this, "RollbackNetplayService", "Calling startActivity(GameActivity)");
         try {

@@ -252,15 +252,13 @@ public class RollbackNetplayActivity extends AppCompatActivity {
                 TextView text2 = view.findViewById(android.R.id.text2);
                 text1.setTextColor(0xFFFFFFFF);
                 text2.setTextColor(0xFF9C9897);
-                // Even positions are titles, odd are subtitles
-                if (position % 2 == 0) {
-                    text1.setText(menuItems[position]);
-                    text2.setText(menuItems[position + 1]);
-                    text2.setVisibility(View.VISIBLE);
-                } else {
-                    text2.setVisibility(View.GONE);
-                    text1.setVisibility(View.GONE);
-                }
+                // 'position' is the per-item index (0..count-1) - getItem()/
+                // getCount() already handle the flat array's title+subtitle
+                // pairing, so every position here is a real, valid item.
+                text1.setText(menuItems[position * 2]);
+                text2.setText(menuItems[position * 2 + 1]);
+                text1.setVisibility(View.VISIBLE);
+                text2.setVisibility(View.VISIBLE);
                 return view;
             }
 

@@ -96,6 +96,7 @@ import paulscode.android.mupen64plusae.util.LocaleContextWrapper;
 import paulscode.android.mupen64plusae.util.Notifier;
 import paulscode.android.mupen64plusae.util.RomDatabase;
 import paulscode.mupen64plusae.rollback.RollbackGameBridge;
+import paulscode.mupen64plusae.rollback.RollbackGameLaunchKeys;
 
 import static paulscode.android.mupen64plusae.persistent.GlobalPrefs.DEFAULT_LOCALE_OVERRIDE;
 
@@ -305,24 +306,37 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         mForceExit = extras.getBoolean(ActivityHelper.Keys.FORCE_EXIT_GAME);
         Log.i(TAG, "forceExit=" + mForceExit);
 
-        mRomPath = extras.getString( ActivityHelper.Keys.ROM_PATH );
-        mZipPath = extras.getString( ActivityHelper.Keys.ZIP_PATH );
-        mRomMd5 = extras.getString( ActivityHelper.Keys.ROM_MD5 );
-        mRomCrc = extras.getString( ActivityHelper.Keys.ROM_CRC );
-        mRomHeaderName = extras.getString( ActivityHelper.Keys.ROM_HEADER_NAME );
-        mRomCountryCode = extras.getByte( ActivityHelper.Keys.ROM_COUNTRY_CODE );
-        mRomArtPath = extras.getString( ActivityHelper.Keys.ROM_ART_PATH );
-        mRomGoodName = extras.getString( ActivityHelper.Keys.ROM_GOOD_NAME );
-        mRomDisplayName = extras.getString( ActivityHelper.Keys.ROM_DISPLAY_NAME );
+        mRomPath = extras.getString( RollbackGameLaunchKeys.ROM_PATH,
+            extras.getString( ActivityHelper.Keys.ROM_PATH ) );
+        mZipPath = extras.getString( RollbackGameLaunchKeys.ZIP_PATH,
+            extras.getString( ActivityHelper.Keys.ZIP_PATH ) );
+        mRomMd5 = extras.getString( RollbackGameLaunchKeys.ROM_MD5,
+            extras.getString( ActivityHelper.Keys.ROM_MD5 ) );
+        mRomCrc = extras.getString( RollbackGameLaunchKeys.ROM_CRC,
+            extras.getString( ActivityHelper.Keys.ROM_CRC ) );
+        mRomHeaderName = extras.getString( RollbackGameLaunchKeys.ROM_HEADER_NAME,
+            extras.getString( ActivityHelper.Keys.ROM_HEADER_NAME ) );
+        mRomCountryCode = extras.containsKey( RollbackGameLaunchKeys.ROM_COUNTRY_CODE )
+            ? extras.getByte( RollbackGameLaunchKeys.ROM_COUNTRY_CODE )
+            : extras.getByte( ActivityHelper.Keys.ROM_COUNTRY_CODE );
+        mRomArtPath = extras.getString( RollbackGameLaunchKeys.ROM_ART_PATH,
+            extras.getString( ActivityHelper.Keys.ROM_ART_PATH ) );
+        mRomGoodName = extras.getString( RollbackGameLaunchKeys.ROM_GOOD_NAME,
+            extras.getString( ActivityHelper.Keys.ROM_GOOD_NAME ) );
+        mRomDisplayName = extras.getString( RollbackGameLaunchKeys.ROM_DISPLAY_NAME,
+            extras.getString( ActivityHelper.Keys.ROM_DISPLAY_NAME ) );
         mDoRestart = extras.getBoolean( ActivityHelper.Keys.DO_RESTART, false );
         mIsNetplayEnabled = extras.getBoolean( ActivityHelper.Keys.NETPLAY_ENABLED, false );
         mIsNetplayServer = extras.getBoolean( ActivityHelper.Keys.NETPLAY_SERVER, false );
-        mIsRollbackMode = extras.getBoolean( ActivityHelper.Keys.ROLLBACK_MODE, false );
+        mIsRollbackMode = extras.getBoolean( RollbackGameLaunchKeys.ROLLBACK_MODE, false );
 
         paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
-            "extras read: mIsRollbackMode=" + mIsRollbackMode
+            "extras read (via RollbackGameLaunchKeys): mIsRollbackMode=" + mIsRollbackMode
             + " mRomPath='" + mRomPath + "' mRomMd5='" + mRomMd5 + "'"
-            + " mZipPath='" + mZipPath + "' mRomGoodName='" + mRomGoodName + "'");
+            + " mZipPath='" + mZipPath + "' mRomGoodName='" + mRomGoodName + "'"
+            + " | containsKey(RollbackGameLaunchKeys.ROM_PATH)=" + extras.containsKey(RollbackGameLaunchKeys.ROM_PATH)
+            + " containsKey(ActivityHelper.Keys.ROM_PATH)=" + extras.containsKey(ActivityHelper.Keys.ROM_PATH)
+            + " allKeys=" + extras.keySet());
 
         if (mIsRollbackMode) {
             mRollbackMatchEndReceiver = RollbackGameBridge.registerMatchEndReceiver(
