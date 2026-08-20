@@ -10,7 +10,8 @@
     <application>
         <service
             android:name=".RollbackNetplayService"
-            android:exported="false" />
+            android:exported="false"
+            android:process=":EmulationProcess" />
 
         <service
             android:name=".NetplayOverlayService"
@@ -23,6 +24,7 @@
             android:label="Rollback Netplay"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Rollback.NoActionBar"
+            android:process=":EmulationProcess"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="paulscode.mupen64plusae.ROLLBACK_NETPLAY" />
