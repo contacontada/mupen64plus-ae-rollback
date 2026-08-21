@@ -524,16 +524,13 @@ public class RollbackNetplayService extends Service {
 
                 notifyStatus("Starting rollback session...");
 
-                // Initialize the rollback core bridge
-                RollbackCoreBridge.init(this);
-
-                // Configure rollback mode
-                if (!RollbackCoreBridge.setupRollbackMode(this, peers.size(), 4)) {
-                    notifyError("Failed to configure rollback mode");
-                    return;
-                }
-
                 String gameName = "N64 Game";
+
+                // Start GekkoNet lobby session via JNI. This also
+                // configures deterministic mode and input players
+                // internally (see coreRollbackSetDeterministic/
+                // coreRollbackSetInputPlayers in rollback_jni.cpp) - no
+                // separate setup step needed.
 
                 // Start GekkoNet lobby session via JNI
                 boolean success = RollbackNative.nativeStartLobbySession(

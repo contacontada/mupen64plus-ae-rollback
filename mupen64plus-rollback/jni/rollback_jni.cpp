@@ -679,7 +679,8 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
     }
 
     // Install input callback
-    if (!coreRollbackSetInputPlayers(g_GekkoPlayers) ||
+    if (!coreRollbackSetDeterministic(true) ||
+        !coreRollbackSetInputPlayers(g_GekkoPlayers) ||
         !coreRollbackSetInputCallback(reinterpret_cast<void*>(rollbackInputCallback))) {
         LOGE("Failed to install input callback");
         gekko_destroy(&g_GekkoSession);
@@ -823,7 +824,8 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
         goto cleanup;
     }
 
-    if (!coreRollbackSetInputPlayers(g_GekkoPlayers) ||
+    if (!coreRollbackSetDeterministic(true) ||
+        !coreRollbackSetInputPlayers(g_GekkoPlayers) ||
         !coreRollbackSetInputCallback(reinterpret_cast<void*>(rollbackInputCallback))) {
         LOGE("Failed to install input callback");
         goto cleanup;
