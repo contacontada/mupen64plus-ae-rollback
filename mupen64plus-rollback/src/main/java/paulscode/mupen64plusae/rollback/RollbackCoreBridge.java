@@ -1,5 +1,6 @@
 package paulscode.mupen64plusae.rollback;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.sun.jna.Native;
@@ -36,12 +37,16 @@ public class RollbackCoreBridge {
      * Initialize by loading the core library.
      * Call this after the AE has loaded the core (so the .so is already in memory).
      */
-    public static void init() {
+    public static void init(Context context) {
         try {
+            RollbackDebugLog.log(context, TAG, "init() calling Native.load(\"mupen64plus-core\", ...)");
             sCoreLib = Native.load("mupen64plus-core", RollbackCoreLibrary.class);
             Log.i(TAG, "RollbackCoreBridge initialized (core library loaded)");
-        } catch (Exception e) {
+            RollbackDebugLog.log(context, TAG, "init() SUCCESS, sCoreLib=" + sCoreLib);
+        } catch (Throwable e) {
             Log.e(TAG, "Failed to load core library", e);
+            RollbackDebugLog.error(context, TAG, "init() Native.load() THREW", e);
+            sCoreLib = null;
         }
     }
 
@@ -129,29 +134,44 @@ public class RollbackCoreBridge {
      * Set up rollback mode before starting execution.
      * Call this after ROM is loaded but before startRollbackExecution().
      */
-    public static boolean setupRollbackMode(int players, int inputSize) {
+    public static boolean setupRollbackMode(Context context, int players, int inputSize) {
         if (sCoreLib == null) {
             Log.e(TAG, "Core library not loaded");
+            RollbackDebugLog.log(context, TAG, "setupRollbackMode() ABORT: sCoreLib is null");
             return false;
         }
+
+        RollbackDebugLog.log(context, TAG,
+            "setupRollbackMode() calling CoreDoCommand(M64CMD_ROLLBACK_SET_DETERMINISTIC="
+            + RollbackJnaTypes.M64CMD_ROLLBACK_SET_DETERMINISTIC + ", 1, null)");
 
         // Set deterministic mode
         int detResult = sCoreLib.CoreDoCommand(
             RollbackJnaTypes.M64CMD_ROLLBACK_SET_DETERMINISTIC, 1, null);
+        RollbackDebugLog.log(context, TAG,
+            "CoreDoCommand(SET_DETERMINISTIC) returned " + detResult
+            + " (M64ERR_SUCCESS=" + RollbackJnaTypes.M64ERR_SUCCESS + ")");
         if (detResult != RollbackJnaTypes.M64ERR_SUCCESS) {
             Log.e(TAG, "Failed to set deterministic mode");
             return false;
         }
 
+        RollbackDebugLog.log(context, TAG,
+            "setupRollbackMode() calling CoreDoCommand(M64CMD_ROLLBACK_SET_INPUT_PLAYERS="
+            + RollbackJnaTypes.M64CMD_ROLLBACK_SET_INPUT_PLAYERS + ", " + players + ", null)");
+
         // Set input players
         int playersResult = sCoreLib.CoreDoCommand(
             RollbackJnaTypes.M64CMD_ROLLBACK_SET_INPUT_PLAYERS, players, null);
+        RollbackDebugLog.log(context, TAG,
+            "CoreDoCommand(SET_INPUT_PLAYERS) returned " + playersResult);
         if (playersResult != RollbackJnaTypes.M64ERR_SUCCESS) {
             Log.e(TAG, "Failed to set input players");
             return false;
         }
 
         Log.i(TAG, "Rollback mode configured: players=" + players + " inputSize=" + inputSize);
+        RollbackDebugLog.log(context, TAG, "setupRollbackMode() SUCCESS");
         return true;
     }
 }

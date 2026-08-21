@@ -14,20 +14,24 @@ import java.util.List;
  */
 public class RollbackJnaTypes {
 
-    // Command ordinals (must match m64p_types.h C enum)
-    public static final int M64CMD_ROLLBACK_SAVE_STATE = 30;
-    public static final int M64CMD_ROLLBACK_LOAD_STATE = 31;
-    public static final int M64CMD_ROLLBACK_FREE_STATE = 32;
-    public static final int M64CMD_ROLLBACK_SET_INPUT_CALLBACK = 33;
-    public static final int M64CMD_ROLLBACK_SET_INPUT_PLAYERS = 34;
-    public static final int M64CMD_ROLLBACK_SET_DETERMINISTIC = 35;
-    public static final int M64CMD_ROLLBACK_SAMPLE_INPUT = 36;
-    public static final int M64CMD_ROLLBACK_EXECUTE = 37;
-    public static final int M64CMD_ROLLBACK_RUN_FRAME = 38;
-    public static final int M64CMD_ROLLBACK_GET_RUN_FRAME_STATS = 39;
-    public static final int M64CMD_ROLLBACK_SET_VERBOSE_STATS = 40;
-    public static final int M64CMD_ROLLBACK_SET_TIMESYNC_SCALE = 41;
-    public static final int M64CMD_FRAME_OUTPUT_SET = 42;
+    // Command ordinals (must match m64p_types.h C enum exactly - counted
+    // directly from api/m64p_types.h's m64p_command enum, starting at
+    // M64CMD_NOP=0). These were previously off by 2 for every rollback
+    // command, which silently invoked the wrong command every time (e.g.
+    // the old SET_DETERMINISTIC=35 was actually M64CMD_ROLLBACK_EXECUTE).
+    public static final int M64CMD_ROLLBACK_SAVE_STATE = 28;
+    public static final int M64CMD_ROLLBACK_LOAD_STATE = 29;
+    public static final int M64CMD_ROLLBACK_FREE_STATE = 30;
+    public static final int M64CMD_ROLLBACK_SET_INPUT_CALLBACK = 31;
+    public static final int M64CMD_ROLLBACK_SET_INPUT_PLAYERS = 32;
+    public static final int M64CMD_ROLLBACK_SET_DETERMINISTIC = 33;
+    public static final int M64CMD_ROLLBACK_SAMPLE_INPUT = 34;
+    public static final int M64CMD_ROLLBACK_EXECUTE = 35;
+    public static final int M64CMD_ROLLBACK_RUN_FRAME = 36;
+    public static final int M64CMD_ROLLBACK_GET_RUN_FRAME_STATS = 37;
+    public static final int M64CMD_ROLLBACK_SET_VERBOSE_STATS = 38;
+    public static final int M64CMD_ROLLBACK_SET_TIMESYNC_SCALE = 39;
+    public static final int M64CMD_FRAME_OUTPUT_SET = 40;
 
     // Error codes
     public static final int M64ERR_SUCCESS = 0;

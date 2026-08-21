@@ -525,10 +525,10 @@ public class RollbackNetplayService extends Service {
                 notifyStatus("Starting rollback session...");
 
                 // Initialize the rollback core bridge
-                RollbackCoreBridge.init();
+                RollbackCoreBridge.init(this);
 
                 // Configure rollback mode
-                if (!RollbackCoreBridge.setupRollbackMode(peers.size(), 4)) {
+                if (!RollbackCoreBridge.setupRollbackMode(this, peers.size(), 4)) {
                     notifyError("Failed to configure rollback mode");
                     return;
                 }
