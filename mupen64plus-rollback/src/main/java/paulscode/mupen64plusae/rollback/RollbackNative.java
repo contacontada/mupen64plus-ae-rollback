@@ -36,6 +36,11 @@ public class RollbackNative {
         int localDelay, int predictionWindow);
 
     public static native boolean nativeExecute();
+
+    /** Human-readable reason for the last nativeStartLobbySession()/
+     * nativeStartP2PSession() failure - since those only return a
+     * boolean, this is what lets the reason actually reach the screen. */
+    public static native String nativeGetLastError();
     public static native void nativeCloseSession();
     public static native void nativeRequestStop();
 

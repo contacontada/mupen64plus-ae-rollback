@@ -35,6 +35,7 @@
 #include <errno.h>
 
 static int g_UdpSocket = -1;
+static std::string g_LastNativeError;
 
 static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) {
     if (g_UdpSocket < 0 || !addr || !data || length <= 0) return;
@@ -584,10 +585,12 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
     jint localPlayer, jint localPort,
     jstring remoteIp, jint remotePort,
     jint localDelay, jint predictionWindow) {
+    g_LastNativeError.clear();
     (void)clazz;
 
     if (g_GekkoSession) {
         LOGE("Session already active");
+        g_LastNativeError = "Session already active";
         return JNI_FALSE;
     }
 
@@ -602,6 +605,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
 
     if (!gekko_create(&g_GekkoSession, GekkoGameSession)) {
         LOGE("Failed to create GekkoNet session");
+        g_LastNativeError = "gekko_create() failed";
         env->ReleaseStringUTFChars(gameName, game);
         env->ReleaseStringUTFChars(remoteIp, remote);
         return JNI_FALSE;
@@ -621,6 +625,8 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
     // Use POSIX UDP adapter (Android-compatible, no ASIO)
     if (!posix_udp_init(static_cast<unsigned short>(localPort))) {
         LOGE("Failed to create UDP adapter");
+        g_LastNativeError = "posix_udp_init() failed to bind local port " + std::to_string(localPort)
+            + " (port may already be in use)";
         gekko_destroy(&g_GekkoSession);
         g_GekkoSession = nullptr;
         env->ReleaseStringUTFChars(gameName, game);
@@ -648,6 +654,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
             int handle = gekko_add_actor(g_GekkoSession, GekkoLocalPlayer, nullptr);
             if (handle < 0) {
                 LOGE("Failed to add local actor");
+                g_LastNativeError = "gekko_add_actor(local) failed for player " + std::to_string(player);
                 gekko_destroy(&g_GekkoSession);
                 g_GekkoSession = nullptr;
                 env->ReleaseStringUTFChars(gameName, game);
@@ -666,6 +673,8 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
             int handle = gekko_add_actor(g_GekkoSession, GekkoRemotePlayer, &addr);
             if (handle < 0) {
                 LOGE("Failed to add remote actor");
+                g_LastNativeError = "gekko_add_actor(remote) failed for player " + std::to_string(player)
+                    + " @ " + remoteAddr;
                 gekko_destroy(&g_GekkoSession);
                 g_GekkoSession = nullptr;
                 env->ReleaseStringUTFChars(gameName, game);
@@ -683,6 +692,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
         !coreRollbackSetInputPlayers(g_GekkoPlayers) ||
         !coreRollbackSetInputCallback(reinterpret_cast<void*>(rollbackInputCallback))) {
         LOGE("Failed to install input callback");
+        g_LastNativeError = "coreRollbackSetDeterministic/SetInputPlayers/SetInputCallback failed";
         gekko_destroy(&g_GekkoSession);
         g_GekkoSession = nullptr;
         env->ReleaseStringUTFChars(gameName, game);
@@ -710,10 +720,12 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
     jint localPlayer, jint localPort,
     jintArray remoteSlots, jobjectArray remoteIps, jintArray remotePorts,
     jint localDelay, jint predictionWindow) {
+    g_LastNativeError.clear();
     (void)clazz;
 
     if (g_GekkoSession) {
         LOGE("Session already active");
+        g_LastNativeError = "Session already active";
         return JNI_FALSE;
     }
 
@@ -731,6 +743,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
 
     if (!gekko_create(&g_GekkoSession, GekkoGameSession)) {
         LOGE("Failed to create GekkoNet session");
+        g_LastNativeError = "gekko_create() failed";
         env->ReleaseStringUTFChars(gameName, game);
         env->ReleaseIntArrayElements(remoteSlots, slots, 0);
         env->ReleaseIntArrayElements(remotePorts, ports, 0);
@@ -750,6 +763,8 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
 
     if (!posix_udp_init(static_cast<unsigned short>(localPort))) {
         LOGE("Failed to create UDP adapter");
+        g_LastNativeError = "posix_udp_init() failed to bind local port " + std::to_string(localPort)
+            + " (port may already be in use)";
         gekko_destroy(&g_GekkoSession);
         g_GekkoSession = nullptr;
         env->ReleaseStringUTFChars(gameName, game);
@@ -786,6 +801,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
             int handle = gekko_add_actor(g_GekkoSession, GekkoLocalPlayer, nullptr);
             if (handle < 0) {
                 LOGE("Failed to add local actor");
+                g_LastNativeError = "gekko_add_actor(local) failed for player " + std::to_string(player);
                 goto cleanup;
             }
             g_GekkoLocalHandle = handle;
@@ -811,6 +827,8 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
             int handle = gekko_add_actor(g_GekkoSession, GekkoRemotePlayer, &gekkoAddr);
             if (handle < 0) {
                 LOGE("Failed to add remote actor for slot %d", player);
+                g_LastNativeError = "gekko_add_actor(remote) failed for slot " + std::to_string(player)
+                    + " @ " + addr;
                 goto cleanup;
             }
             if (g_GekkoRemoteHandle < 0) g_GekkoRemoteHandle = handle;
@@ -821,6 +839,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
 
     if (g_GekkoLocalHandle < 0) {
         LOGE("No local handle");
+        g_LastNativeError = "No local handle assigned (localPlayer=" + std::to_string(localPlayer) + ")";
         goto cleanup;
     }
 
@@ -828,6 +847,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
         !coreRollbackSetInputPlayers(g_GekkoPlayers) ||
         !coreRollbackSetInputCallback(reinterpret_cast<void*>(rollbackInputCallback))) {
         LOGE("Failed to install input callback");
+        g_LastNativeError = "coreRollbackSetDeterministic/SetInputPlayers/SetInputCallback failed";
         goto cleanup;
     }
 
@@ -849,6 +869,17 @@ cleanup:
     env->ReleaseIntArrayElements(remoteSlots, slots, 0);
     env->ReleaseIntArrayElements(remotePorts, ports, 0);
     return JNI_FALSE;
+}
+
+// Returns a human-readable reason for the last nativeStartLobbySession()/
+// nativeStartP2PSession() failure - since those only return a boolean,
+// this is what lets the Java side (and RollbackDebugLog) show *why*
+// something failed instead of just "returned false".
+JNIEXPORT jstring JNICALL
+Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeGetLastError(
+    JNIEnv* env, jclass clazz) {
+    (void)clazz;
+    return env->NewStringUTF(g_LastNativeError.c_str());
 }
 
 // Execute the rollback loop (blocks until session ends)

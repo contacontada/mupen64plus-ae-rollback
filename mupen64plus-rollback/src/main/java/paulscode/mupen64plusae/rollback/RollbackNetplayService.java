@@ -290,7 +290,10 @@ public class RollbackNetplayService extends Service {
                     remoteIp, remotePort, localDelay, 7);
 
                 if (!success) {
-                    notifyError("Failed to start P2P session");
+                    String reason = RollbackNative.nativeGetLastError();
+                    RollbackDebugLog.log(this, "RollbackNetplayService",
+                        "nativeStartP2PSession() returned false, reason: " + reason);
+                    notifyError("Failed to start P2P session: " + reason);
                     return;
                 }
 
@@ -547,7 +550,10 @@ public class RollbackNetplayService extends Service {
                 );
 
                 if (!success) {
-                    notifyError("Failed to start GekkoNet session");
+                    String reason = RollbackNative.nativeGetLastError();
+                    RollbackDebugLog.log(this, "RollbackNetplayService",
+                        "nativeStartLobbySession() returned false, reason: " + reason);
+                    notifyError("Failed to start GekkoNet session: " + reason);
                     return;
                 }
 
