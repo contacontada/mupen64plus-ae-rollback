@@ -585,7 +585,6 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
     jint localPlayer, jint localPort,
     jstring remoteIp, jint remotePort,
     jint localDelay, jint predictionWindow) {
-    g_LastNativeError.clear();
     (void)clazz;
 
     if (g_GekkoSession) {
@@ -720,7 +719,6 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
     jint localPlayer, jint localPort,
     jintArray remoteSlots, jobjectArray remoteIps, jintArray remotePorts,
     jint localDelay, jint predictionWindow) {
-    g_LastNativeError.clear();
     (void)clazz;
 
     if (g_GekkoSession) {

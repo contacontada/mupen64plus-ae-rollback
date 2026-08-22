@@ -82,7 +82,7 @@ jobs:
       run: |
         mkdir -p release-assets
         cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk release-assets/Mupen64PlusAE-Rollback.apk
-        tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch22.tar.gz .
+        tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch23.tar.gz .
 
     - name: Upload APK and source archive
       uses: actions/upload-artifact@v4

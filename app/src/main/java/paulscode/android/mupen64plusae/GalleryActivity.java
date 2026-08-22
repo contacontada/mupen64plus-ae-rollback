@@ -972,10 +972,7 @@ public class GalleryActivity extends AppCompatActivity implements GameSidebarAct
             // later to actually start the emulation core once a match is
             // found - see RollbackGameBridge)
             paulscode.mupen64plusae.rollback.RollbackNetplayActivity.launch(
-                GalleryActivity.this,
-                item.romUri,
-                item.zipUri,
-                item.md5, item.crc,
+                GalleryActivity.this, item.romUri, item.zipUri, item.md5, item.crc,
                 item.headerName, item.countryCode.getValue(), item.artPath,
                 item.goodName, item.displayName);
         } else if (menuItem.getItemId() == R.id.menuItem_settings) {

@@ -810,8 +810,12 @@ public class RollbackNetplayActivity extends AppCompatActivity {
 
             boolean hasEndpoint = peer.publicIp != null && !peer.publicIp.isEmpty();
             if (hasEndpoint) {
+                // Never display another player's raw IP address on screen -
+                // this is a known "IP grabbing" vector for DDoS/swatting/
+                // harassment in P2P games. The IP is still used internally
+                // for the actual GekkoNet connection; it's just not shown.
                 holder.playerEndpoint.setVisibility(View.VISIBLE);
-                holder.playerEndpoint.setText(peer.publicIp + ":" + peer.publicPort);
+                holder.playerEndpoint.setText("Connected");
 
                 int ping = serviceBound ? netplayService.getLobbyClient().getMeasuredPing(peer.userId) : -1;
                 holder.pingText.setVisibility(View.VISIBLE);
