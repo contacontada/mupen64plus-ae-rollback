@@ -90,7 +90,8 @@ public class RollbackNetplayService extends Service {
 
         Object waitHandle = RollbackGameBridge.beginWaitForCoreReady(this);
 
-        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
+        Intent intent = new Intent();
+        intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(RollbackGameLaunchKeys.ROM_PATH, romPath);
         intent.putExtra(RollbackGameLaunchKeys.ZIP_PATH, zipPath);
