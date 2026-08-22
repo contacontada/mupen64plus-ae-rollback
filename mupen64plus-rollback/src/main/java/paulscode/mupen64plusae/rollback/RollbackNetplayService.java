@@ -535,6 +535,9 @@ public class RollbackNetplayService extends Service {
                 // coreRollbackSetInputPlayers in rollback_jni.cpp) - no
                 // separate setup step needed.
 
+                // Release the Java UDP anchor before GekkoNet binds its native socket.
+                lobbyClient.stopUdpAnchorForGameSession();
+
                 // Start GekkoNet lobby session via JNI
                 boolean success = RollbackNative.nativeStartLobbySession(
                     gameName,

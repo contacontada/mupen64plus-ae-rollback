@@ -686,6 +686,20 @@ public class RmgkLobbyClient {
         }
     }
 
+    /**
+     * Closes the UDP anchor socket. Call this right before starting the
+     * actual GekkoNet session (nativeStartLobbySession/nativeStartP2PSession) -
+     * those bind a native socket to this same local port (to keep the
+     * NAT-punched path the anchor already established), which fails with
+     * "address already in use" if this Java socket is still holding it
+     * open. The anchor's job (reporting our endpoint to the server so
+     * peers can learn it) is already done by the time a match begins, so
+     * there's nothing lost by closing it here.
+     */
+    public void stopUdpAnchorForGameSession() {
+        closeUdpSocket();
+    }
+
     private void closeUdpSocket() {
         udpRunning = false;
         if (udpSocket != null && !udpSocket.isClosed()) udpSocket.close();
