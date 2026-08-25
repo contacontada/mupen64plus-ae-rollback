@@ -14,12 +14,12 @@ O APK é compilado automaticamente pelo [GitHub Actions](https://github.com/cont
 |---|---|---|
 | M64PLUS R | [![Build Status][Build]][Actions] | [![Download][Download]][apk] |
 
-O APK e o arquivo `mupen64plus-ae-rollback-patch27.tar.gz` estão disponíveis na [Release `Pre-release`](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release). Os artefatos gerados podem ser baixados na [execução do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions) correspondente ao commit mais recente.
+O APK `M64PLUS R.apk` e o arquivo `mupen64plus-ae-rollback-patch27.tar.gz` estão disponíveis na [Release `Pre-release`](https://github.com/contacontada/mupen64plus-ae-rollback/releases/tag/Pre-release). Os artefatos gerados podem ser baixados na [execução do GitHub Actions](https://github.com/contacontada/mupen64plus-ae-rollback/actions) correspondente ao commit mais recente.
 
 [Actions]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml
 [Build]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
-[apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/Mupen64PlusAE-Rollback.apk
+[apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/M64PLUS%20R.apk
 
 ## O que este repositório inclui
 

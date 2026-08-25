@@ -80,13 +80,13 @@ jobs:
     - name: Prepare APK and source archive for release
       run: |
         mkdir -p release-assets
-        cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk release-assets/Mupen64PlusAE-Rollback.apk
+        cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk "release-assets/M64PLUS R.apk"
         tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch27.tar.gz .
 
     - name: Upload APK and source archive
       uses: actions/upload-artifact@v4
       with:
-        name: mupen64plus-ae-${{ steps.var.outputs.branch }}-${{ env.SHA }}
+        name: mupen64plus-ae-rollback-patch27-${{ env.SHA }}
         path: release-assets/*
 
   release:
