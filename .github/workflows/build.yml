@@ -127,11 +127,6 @@ jobs:
       env:
         SHA: ${{ steps.short-sha.outputs.sha }}
 
-    - name: Re-zip artifacts
-      run: |
-        cd dist
-        zip -r mupen64plus-ae-${{ steps.var.outputs.branch }}.zip mupen64plus-ae*
-
     - name: Update Git Tag
       run: |
         git tag -f Pre-release
