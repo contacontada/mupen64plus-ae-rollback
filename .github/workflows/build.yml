@@ -50,9 +50,8 @@ jobs:
 
     - name: Restore executable permissions
       run: |
-        chmod +x gradlew || true
+        chmod +x gradlew build_rollback.sh verify_build.sh
         find . -name "*.sh" -path "*mupen64plus*" -exec chmod +x {} \; 2>/dev/null || true
-        chmod -R +x gradlew build_rollback.sh verify_build.sh 2>/dev/null || true
 
     - name: Build artifact
       run: ./gradlew assemble
@@ -82,7 +81,7 @@ jobs:
       run: |
         mkdir -p release-assets
         cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk release-assets/Mupen64PlusAE-Rollback.apk
-        tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch24.tar.gz .
+        tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch27.tar.gz .
 
     - name: Upload APK and source archive
       uses: actions/upload-artifact@v4
@@ -107,6 +106,37 @@ jobs:
       with:
         path: dist
 
+    - name: Declare branch name
+      id: branch-name
+      uses: tj-actions/branch-names@v8
+
+    - name: Get branch name
+      id: var
+      run: |
+        echo "branch=${{ steps.branch-name.outputs.current_branch }}" >> $GITHUB_OUTPUT
+
+    - name: Declare sha name
+      uses: benjlevesque/short-sha@v3.0
+      id: short-sha
+      with:
+        length: 7
+
+    - name: Get sha name
+      run: |
+        echo $SHA
+      env:
+        SHA: ${{ steps.short-sha.outputs.sha }}
+
+    - name: Re-zip artifacts
+      run: |
+        cd dist
+        zip -r mupen64plus-ae-${{ steps.var.outputs.branch }}.zip mupen64plus-ae*
+
+    - name: Update Git Tag
+      run: |
+        git tag -f Pre-release
+        git push -f origin Pre-release
+
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
@@ -115,6 +145,6 @@ jobs:
         removeArtifacts: true
         replacesArtifacts: true
         tag: Pre-release
-        artifacts: "dist/**/*"
-        body: "Patch 24 build of M64PLUS R."
+        body: "Patch 27 build of Mupen64Plus-AE Rollback."
+        artifacts: "dist/*.zip"
         token: ${{ secrets.GITHUB_TOKEN }}

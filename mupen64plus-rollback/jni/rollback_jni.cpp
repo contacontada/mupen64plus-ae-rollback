@@ -398,15 +398,25 @@ static bool saveGekkoState(int frame, unsigned int* checksum, unsigned int* stat
     unsigned char* outBuffer = nullptr;
     int outLen = 0;
     unsigned int outChecksum = 0;
+    // Note: the native core always allocates a fresh buffer here (it does
+    // NOT write in-place into `state`) - the caller (us) is responsible
+    // for copying the data out and freeing the core's allocation via
+    // M64CMD_ROLLBACK_FREE_STATE, same as everywhere else this pattern is
+    // used in this file.
     if (!coreRollbackSaveState(state, static_cast<int>(kStateCapacity), frame,
                                 &outBuffer, &outLen, &outChecksum)) {
         return false;
     }
 
-    if (outLen < 1 || static_cast<unsigned int>(outLen) > kStateCapacity) return false;
-    if (outBuffer != state) return false;
+    if (!outBuffer || outLen < 1 || static_cast<unsigned int>(outLen) > kStateCapacity) {
+        if (outBuffer) CoreDoCommand(M64CMD_ROLLBACK_FREE_STATE, 0, outBuffer);
+        return false;
+    }
 
-    if (stateLen) *stateLen = static_cast<unsigned int>(outLen);
+    memcpy(state, outBuffer, static_cast<size_t>(outLen));
+    CoreDoCommand(M64CMD_ROLLBACK_FREE_STATE, 0, outBuffer);
+
+    *stateLen = static_cast<unsigned int>(outLen);
     if (checksum) *checksum = outChecksum;
     return true;
 }
@@ -417,10 +427,22 @@ static bool loadGekkoState(const GekkoGameEvent* event) {
 }
 
 // ---------------------------------------------------------------------------
-// Rollback execute callbacks (called by core)
+// GekkoNet tick: polls the network, processes session/game events, and
+// advances exactly as many frames as GekkoNet currently has ready (hidden
+// rollback/runahead frames with no output, then one real visible frame).
+//
+// IMPORTANT: this must be driven from an OUTER loop (nativeExecute(), see
+// below) - it must NEVER be called from inside the begin_frame/end_frame
+// callbacks that the core invokes around a single M64CMD_ROLLBACK_RUN_FRAME
+// step. This function itself calls coreRollbackRunFrame(), which triggers
+// the core to call begin_frame() - if THIS function were also registered
+// as begin_frame, that call would recurse into itself on every single game
+// frame, nesting one more native stack frame deeper with no way to ever
+// unwind until the whole session ends, guaranteeing a stack overflow crash
+// within seconds of real gameplay. (This was exactly that bug - previously
+// this logic lived directly inside rollbackBeginFrame.)
 // ---------------------------------------------------------------------------
-static int rollbackBeginFrame(void* userData) {
-    (void)userData;
+static int gekkoTick() {
     if (!g_GekkoSession) return 0;
     if (g_GekkoStopRequested.load()) return 0;
 
@@ -525,6 +547,17 @@ static int rollbackBeginFrame(void* userData) {
 
         if (hasRealAdvance) return 1;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Rollback execute callbacks (called by core around each single
+// M64CMD_ROLLBACK_RUN_FRAME step - see main_rollback_run_frame() in
+// main.c). Deliberately minimal and non-recursive: the real per-tick work
+// lives in gekkoTick() above, driven from nativeExecute()'s own loop.
+// ---------------------------------------------------------------------------
+static int rollbackBeginFrame(void* userData) {
+    (void)userData;
+    return g_GekkoSession && !g_GekkoStopRequested.load() ? 1 : 0;
 }
 
 static int rollbackEndFrame(void* userData) {
@@ -898,10 +931,25 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     callbacks.pace_before_present = nullptr;
     callbacks.pacing_trace_enabled = 0;
 
+    // Registers the callbacks with the core (this call itself returns
+    // immediately - see main_set_rollback_execute_callbacks in main.c).
+    // The actual game loop is the gekkoTick() loop below, not something
+    // coreRollbackExecute() does internally.
+    if (!coreRollbackExecute(&callbacks)) {
+        LOGE("Failed to register rollback execute callbacks");
+        return JNI_FALSE;
+    }
+
     g_GekkoExecuting.store(true);
     LOGI("Starting rollback execution loop");
 
-    bool result = coreRollbackExecute(&callbacks);
+    bool result = true;
+    while (!g_GekkoStopRequested.load()) {
+        if (!gekkoTick()) {
+            result = false;
+            break;
+        }
+    }
 
     g_GekkoExecuting.store(false);
     LOGI("Rollback execution loop ended: %s", result ? "success" : "failure");

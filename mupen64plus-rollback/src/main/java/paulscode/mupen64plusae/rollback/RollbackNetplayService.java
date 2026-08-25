@@ -90,8 +90,7 @@ public class RollbackNetplayService extends Service {
 
         Object waitHandle = RollbackGameBridge.beginWaitForCoreReady(this);
 
-        Intent intent = new Intent();
-        intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
+        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(RollbackGameLaunchKeys.ROM_PATH, romPath);
         intent.putExtra(RollbackGameLaunchKeys.ZIP_PATH, zipPath);
@@ -535,7 +534,10 @@ public class RollbackNetplayService extends Service {
                 // coreRollbackSetInputPlayers in rollback_jni.cpp) - no
                 // separate setup step needed.
 
-                // Release the Java UDP anchor before GekkoNet binds its native socket.
+                // Free up the local UDP port for GekkoNet's native socket -
+                // the anchor's Java-side socket is still holding it open at
+                // this point, which would otherwise make posix_udp_init()
+                // fail with "address already in use".
                 lobbyClient.stopUdpAnchorForGameSession();
 
                 // Start GekkoNet lobby session via JNI
@@ -560,6 +562,8 @@ public class RollbackNetplayService extends Service {
                     return;
                 }
 
+                RollbackDebugLog.log(this, "RollbackNetplayService",
+                    "nativeStartLobbySession() SUCCESS - calling notifyMatchStarted() then nativeExecute()");
                 notifyMatchStarted();
 
                 // Run rollback execution via JNI
@@ -568,12 +572,16 @@ public class RollbackNetplayService extends Service {
                 // - The video plugin renders to the existing GL context
                 // - Audio plugin handles audio output
                 // - GekkoNet handles input sync and state save/load
+                // This call BLOCKS until the match/session ends.
                 boolean execResult = RollbackNative.nativeExecute();
 
+                RollbackDebugLog.log(this, "RollbackNetplayService",
+                    "nativeExecute() RETURNED: " + execResult + " (was blocking until now)");
                 Log.i(TAG, "Rollback execution ended: " + execResult);
                 notifyMatchFinished();
 
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                RollbackDebugLog.error(this, "RollbackNetplayService", "handleMatchBegin() THREW", e);
                 Log.e(TAG, "Match start failed", e);
                 notifyError("Match failed: " + e.getMessage());
             }
