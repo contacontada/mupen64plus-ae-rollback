@@ -19,7 +19,7 @@ O APK `M64PLUS R.apk` e o arquivo `mupen64plus-ae-rollback-patch27.tar.gz` estã
 [Actions]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml
 [Build]: https://github.com/contacontada/mupen64plus-ae-rollback/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
-[apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/M64PLUS%20R.apk
+[apk]: https://github.com/contacontada/mupen64plus-ae-rollback/releases/download/Pre-release/M64PLUS.R.apk
 
 ## O que este repositório inclui
 
