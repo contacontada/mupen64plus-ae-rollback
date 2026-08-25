@@ -146,5 +146,5 @@ jobs:
         replacesArtifacts: true
         tag: Pre-release
         body: "Patch 27 build of Mupen64Plus-AE Rollback."
-        artifacts: "dist/*.zip"
+        artifacts: "dist/**/*"
         token: ${{ secrets.GITHUB_TOKEN }}
