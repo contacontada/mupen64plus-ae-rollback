@@ -483,7 +483,10 @@ static int gekkoTick() {
     }
     applyFramePacing();
 
-    if (!submitLocalInput()) return 0;
+    if (!submitLocalInput()) {
+        g_LastNativeError = "gekkoTick: submitLocalInput() failed";
+        return 0;
+    }
 
     // Event loop - process until we get a real advance
     for (;;) {
@@ -515,6 +518,8 @@ static int gekkoTick() {
                 if (!deferSaves) {
                     if (!saveGekkoState(event->data.save.frame, checksum, stateLen, state)) {
                         LOGE("Save state failed at frame %d", event->data.save.frame);
+                        g_LastNativeError = "gekkoTick: saveGekkoState() failed at frame "
+                            + std::to_string(event->data.save.frame);
                         return 0;
                     }
                 }
@@ -523,19 +528,33 @@ static int gekkoTick() {
             case GekkoLoadEvent:
                 if (!loadGekkoState(event)) {
                     LOGE("Load state failed at frame %d", event->data.load.frame);
+                    g_LastNativeError = "gekkoTick: loadGekkoState() failed at frame "
+                        + std::to_string(event->data.load.frame);
                     return 0;
                 }
                 break;
             case GekkoAdvanceEvent:
-                if (!latchGekkoInput(event)) return 0;
+                if (!latchGekkoInput(event)) {
+                    g_LastNativeError = "gekkoTick: latchGekkoInput() failed at frame "
+                        + std::to_string(event->data.adv.frame);
+                    return 0;
+                }
 
                 if (event->data.adv.rolling_back || event->data.adv.running_ahead) {
                     // Hidden frame (rollback or runahead) — no video/audio output
-                    if (!coreRollbackRunFrame(0)) return 0;
+                    if (!coreRollbackRunFrame(0)) {
+                        g_LastNativeError = "gekkoTick: coreRollbackRunFrame(hidden) failed at frame "
+                            + std::to_string(event->data.adv.frame);
+                        return 0;
+                    }
                     g_GekkoHasLatchedInput = false;
                 } else {
                     // Real visible frame — run with video+audio output
-                    if (!coreRollbackRunFrame(M64FRAME_OUTPUT_VIDEO | M64FRAME_OUTPUT_AUDIO)) return 0;
+                    if (!coreRollbackRunFrame(M64FRAME_OUTPUT_VIDEO | M64FRAME_OUTPUT_AUDIO)) {
+                        g_LastNativeError = "gekkoTick: coreRollbackRunFrame(visible) failed at frame "
+                            + std::to_string(event->data.adv.frame);
+                        return 0;
+                    }
                     hasRealAdvance = true;
                     deferSaves = true;
                 }

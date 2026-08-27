@@ -90,11 +90,7 @@ public class RollbackNetplayService extends Service {
 
         Object waitHandle = RollbackGameBridge.beginWaitForCoreReady(this);
 
-        // The rollback library cannot depend directly on the app module. Resolve
-        // GameActivity by its stable component name to avoid a circular Gradle
-        // dependency while keeping the launch explicit.
-        Intent intent = new Intent();
-        intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
+        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(RollbackGameLaunchKeys.ROM_PATH, romPath);
         intent.putExtra(RollbackGameLaunchKeys.ZIP_PATH, zipPath);
@@ -579,8 +575,11 @@ public class RollbackNetplayService extends Service {
                 // This call BLOCKS until the match/session ends.
                 boolean execResult = RollbackNative.nativeExecute();
 
+                String execFailReason = execResult ? null : RollbackNative.nativeGetLastError();
                 RollbackDebugLog.log(this, "RollbackNetplayService",
-                    "nativeExecute() RETURNED: " + execResult + " (was blocking until now)");
+                    "nativeExecute() RETURNED: " + execResult
+                    + (execFailReason != null ? " reason: " + execFailReason : "")
+                    + " (was blocking until now)");
                 Log.i(TAG, "Rollback execution ended: " + execResult);
                 notifyMatchFinished();
 
