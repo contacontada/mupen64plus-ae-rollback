@@ -443,8 +443,14 @@ static bool loadGekkoState(const GekkoGameEvent* event) {
 // this logic lived directly inside rollbackBeginFrame.)
 // ---------------------------------------------------------------------------
 static int gekkoTick() {
-    if (!g_GekkoSession) return 0;
-    if (g_GekkoStopRequested.load()) return 0;
+    if (!g_GekkoSession) {
+        g_LastNativeError = "gekkoTick: g_GekkoSession is null (session was destroyed or never created)";
+        return 0;
+    }
+    if (g_GekkoStopRequested.load()) {
+        g_LastNativeError = "gekkoTick: g_GekkoStopRequested was true at tick start (someone called nativeRequestStop())";
+        return 0;
+    }
 
     g_GekkoHasLatchedInput = false;
 
@@ -490,7 +496,10 @@ static int gekkoTick() {
 
     // Event loop - process until we get a real advance
     for (;;) {
-        if (g_GekkoStopRequested.load()) return 0;
+        if (g_GekkoStopRequested.load()) {
+            g_LastNativeError = "gekkoTick: g_GekkoStopRequested became true inside the event loop";
+            return 0;
+        }
 
         int count = 0;
         GekkoGameEvent** events = gekko_update_session(g_GekkoSession, &count);
@@ -956,6 +965,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // coreRollbackExecute() does internally.
     if (!coreRollbackExecute(&callbacks)) {
         LOGE("Failed to register rollback execute callbacks");
+        g_LastNativeError = "coreRollbackExecute() failed to register callbacks";
         return JNI_FALSE;
     }
 
