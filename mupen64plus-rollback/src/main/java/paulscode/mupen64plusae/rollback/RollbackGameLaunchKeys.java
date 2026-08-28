@@ -31,4 +31,14 @@ public final class RollbackGameLaunchKeys {
     public static final String ROM_GOOD_NAME = "paulscode.mupen64plusae.rollback.ROM_GOOD_NAME";
     public static final String ROM_DISPLAY_NAME = "paulscode.mupen64plusae.rollback.ROM_DISPLAY_NAME";
     public static final String ROLLBACK_MODE = "paulscode.mupen64plusae.rollback.ROLLBACK_MODE";
+
+    // Which N64 controller ports the match needs plugged in, and which
+    // one is this device's own. Neither was previously passed to
+    // GameActivity, so GamePrefs fell back to whatever this specific
+    // device's local (offline/single-player) controller settings
+    // happened to be - normally just port 1 - leaving player 2's port
+    // unplugged in the emulated game regardless of what the network
+    // session agreed. See GamePrefs' rollbackForcedPlayerCount parameter.
+    public static final String NUM_PLAYERS = "paulscode.mupen64plusae.rollback.NUM_PLAYERS";
+    public static final String LOCAL_PLAYER = "paulscode.mupen64plusae.rollback.LOCAL_PLAYER";
 }

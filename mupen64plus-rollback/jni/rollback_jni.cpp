@@ -477,8 +477,25 @@ static int gekkoTick() {
                 break;
             }
             case GekkoPlayerDisconnected:
-                LOGI("Player disconnected: handle=%d", ev->data.disconnected.handle);
-                break;
+                LOGE("Player disconnected: handle=%d", ev->data.disconnected.handle);
+                // Previously this only logged and let the tick loop keep
+                // running - with the remote gone, gekko_update_session()
+                // then just returns count==0 forever, so the loop spins
+                // waiting for input that will never arrive. That's what
+                // produced the "ran for a while then returned false with
+                // an empty reason" symptom: something *else* eventually
+                // tore the session down (app backgrounded, socket error,
+                // etc.) well after the disconnect, by which point there
+                // was no useful error state left to report. Treat the
+                // disconnect itself as fatal and return immediately (not
+                // just flag-and-continue - the stop-requested check
+                // further down would otherwise overwrite this specific
+                // message with a generic one) so the real cause is what
+                // gets surfaced to Java.
+                g_LastNativeError = "Remote player disconnected (handle="
+                    + std::to_string(ev->data.disconnected.handle) + ")";
+                g_GekkoStopRequested.store(true);
+                return 0;
             case GekkoPlayerConnected:
                 LOGI("Player connected: handle=%d", ev->data.connected.handle);
                 break;
@@ -950,6 +967,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
 
     if (!g_GekkoSession) {
         LOGE("No active session");
+        g_LastNativeError = "nativeExecute() called with no active session (g_GekkoSession is null)";
         return JNI_FALSE;
     }
 
@@ -982,6 +1000,16 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
 
     g_GekkoExecuting.store(false);
     LOGI("Rollback execution loop ended: %s", result ? "success" : "failure");
+
+    // Safety net: every known failure path above sets g_LastNativeError,
+    // but if this ever returns false with it still empty (a path we
+    // haven't accounted for, or memory corruption), an empty reason is
+    // strictly worse than a vague one - it makes the failure look like
+    // it never happened. Never let that reach Java blank.
+    if (!result && g_LastNativeError.empty()) {
+        g_LastNativeError = "nativeExecute() failed but no specific reason was recorded "
+            "(unhandled gekkoTick() failure path - please report this)";
+    }
 
     return result ? JNI_TRUE : JNI_FALSE;
 }

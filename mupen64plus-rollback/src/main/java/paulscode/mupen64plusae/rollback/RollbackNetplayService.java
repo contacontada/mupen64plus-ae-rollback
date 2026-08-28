@@ -1,5 +1,8 @@
 package paulscode.mupen64plusae.rollback;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
@@ -77,10 +80,11 @@ public class RollbackNetplayService extends Service {
      *
      * @return null on success, or a human-readable failure reason.
      */
-    private String startGameForRollback() {
+    private String startGameForRollback(int localPlayer, int numPlayers) {
         RollbackDebugLog.log(this, "RollbackNetplayService",
             "startGameForRollback() ENTER: romPath='" + romPath + "' romMd5='" + romMd5
-            + "' zipPath='" + zipPath + "' romGoodName='" + romGoodName + "'");
+            + "' zipPath='" + zipPath + "' romGoodName='" + romGoodName + "'"
+            + " localPlayer=" + localPlayer + " numPlayers=" + numPlayers);
 
         if (romPath.isEmpty() || romMd5.isEmpty()) {
             RollbackDebugLog.log(this, "RollbackNetplayService",
@@ -103,6 +107,8 @@ public class RollbackNetplayService extends Service {
         intent.putExtra(RollbackGameLaunchKeys.ROM_GOOD_NAME, romGoodName);
         intent.putExtra(RollbackGameLaunchKeys.ROM_DISPLAY_NAME, romDisplayName);
         intent.putExtra(RollbackGameLaunchKeys.ROLLBACK_MODE, true);
+        intent.putExtra(RollbackGameLaunchKeys.LOCAL_PLAYER, localPlayer);
+        intent.putExtra(RollbackGameLaunchKeys.NUM_PLAYERS, numPlayers);
 
         RollbackDebugLog.log(this, "RollbackNetplayService", "Calling startActivity(GameActivity)");
         try {
@@ -135,13 +141,53 @@ public class RollbackNetplayService extends Service {
         return binder;
     }
 
+    private static final String FOREGROUND_CHANNEL_ID = "rollback_netplay_service";
+    private static final int FOREGROUND_NOTIFICATION_ID = 4201;
+
     @Override
     public void onCreate() {
         RollbackCrashLogger.install(this);
         super.onCreate();
         lobbyClient = new RmgkLobbyClient();
         lobbyClient.addListener(lobbyListener);
+        // Promote to a foreground service immediately. This service calls
+        // startActivity(GameActivity) from the background (no visible
+        // Activity of ours is on screen yet at that point) - on Android
+        // 10+ that startActivity() call is subject to the OS's background
+        // activity launch restrictions and can be silently deferred for
+        // many seconds, or dropped entirely, if the process has no
+        // foreground/visible exemption. That's what was producing the
+        // erratic "Timed out waiting for the game to start" failures:
+        // startActivity() itself returned normally, but the real launch
+        // was queued by the OS. Being a foreground service for the whole
+        // lifetime of the match grants that exemption.
+        startForegroundCompat();
         Log.i(TAG, "RollbackNetplayService created");
+    }
+
+    private void startForegroundCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null && nm.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
+                NotificationChannel channel = new NotificationChannel(
+                    FOREGROUND_CHANNEL_ID, "Rollback Netplay",
+                    NotificationManager.IMPORTANCE_LOW);
+                channel.setShowBadge(false);
+                nm.createNotificationChannel(channel);
+            }
+        }
+        Notification notification = new Notification.Builder(this, FOREGROUND_CHANNEL_ID)
+            .setContentTitle("Rollback Netplay")
+            .setContentText("Connecting match…")
+            .setSmallIcon(android.R.drawable.ic_menu_compass)
+            .setOngoing(true)
+            .build();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(FOREGROUND_NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        } else {
+            startForeground(FOREGROUND_NOTIFICATION_ID, notification);
+        }
     }
 
     @Override
@@ -149,6 +195,7 @@ public class RollbackNetplayService extends Service {
         stop();
         lobbyClient.disconnectFromServer();
         executor.shutdown();
+        stopForeground(true);
         super.onDestroy();
     }
 
@@ -277,7 +324,7 @@ public class RollbackNetplayService extends Service {
 
         executor.execute(() -> {
             try {
-                String gameStartFailure = startGameForRollback();
+                String gameStartFailure = startGameForRollback(localPlayer, 2);
                 if (gameStartFailure != null) {
                     notifyError("Failed to start game: " + gameStartFailure);
                     return;
@@ -519,7 +566,7 @@ public class RollbackNetplayService extends Service {
                 // trying to configure rollback mode - previously this
                 // step was entirely missing, so setupRollbackMode() below
                 // always failed because no core was running yet.
-                String gameStartFailure = startGameForRollback();
+                String gameStartFailure = startGameForRollback(localPeer.slot, peers.size());
                 if (gameStartFailure != null) {
                     notifyError("Failed to start game: " + gameStartFailure);
                     return;

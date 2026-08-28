@@ -174,6 +174,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
     private boolean mIsNetplayEnabled = false;
     private boolean mIsNetplayServer = false;
     private boolean mIsRollbackMode = false;
+    private int mRollbackNumPlayers = 0;
     private boolean mRollbackReadySignaled = false;
     private android.content.BroadcastReceiver mRollbackMatchEndReceiver;
     private boolean mForceExit = false;
@@ -329,6 +330,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         mIsNetplayEnabled = extras.getBoolean( ActivityHelper.Keys.NETPLAY_ENABLED, false );
         mIsNetplayServer = extras.getBoolean( ActivityHelper.Keys.NETPLAY_SERVER, false );
         mIsRollbackMode = extras.getBoolean( RollbackGameLaunchKeys.ROLLBACK_MODE, false );
+        mRollbackNumPlayers = extras.getInt( RollbackGameLaunchKeys.NUM_PLAYERS, 0 );
 
         paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "GameActivity",
             "extras read (via RollbackGameLaunchKeys): mIsRollbackMode=" + mIsRollbackMode
@@ -367,7 +369,8 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         }
 
         mGamePrefs = new GamePrefs( this, mRomMd5, mRomCrc, mRomHeaderName, mRomGoodName,
-            CountryCode.getCountryCode(mRomCountryCode).toString(), mAppData, mGlobalPrefs );
+            CountryCode.getCountryCode(mRomCountryCode).toString(), mAppData, mGlobalPrefs,
+            mIsRollbackMode ? mRollbackNumPlayers : 0 );
 
         final Window window = this.getWindow();
 

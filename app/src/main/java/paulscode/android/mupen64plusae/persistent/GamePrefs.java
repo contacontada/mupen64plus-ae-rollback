@@ -338,6 +338,33 @@ public class GamePrefs
     public GamePrefs( Context context, String md5, String crc, String headerName, String goodName,
         String countrySymbol, AppData appData, GlobalPrefs globalPrefs)
     {
+        this( context, md5, crc, headerName, goodName, countrySymbol, appData, globalPrefs, 0 );
+    }
+
+    /**
+     * @param rollbackForcedPlayerCount 0 for normal (non-netplay) games,
+     *   where controller port setup comes entirely from this device's own
+     *   local settings (shared-controller mode, per-port profiles, etc).
+     *   For a rollback netplay match, pass the number of players in the
+     *   match instead: which N64 controller ports need to exist in the
+     *   emulated game is a property of the *match* (agreed over the
+     *   network), not of whatever this one device's owner happened to
+     *   configure for local/offline play. Without this, a device that
+     *   never set up a "Controller Profile 2" locally (the common case -
+     *   most players only ever configured their own touchscreen as
+     *   Controller 1) would run the match with player 2's N64 controller
+     *   port reporting as unplugged, so player 2 exists on the network
+     *   but the game itself never reads their input - see isPlugged[]
+     *   below. This also forces isControllerShared off, since a rollback
+     *   match's local input is always exactly one physical source (this
+     *   device's own touchscreen) feeding exactly one port - it must
+     *   never fall back to the shared/split-screen local-multiplayer
+     *   touch layout, which is what was making the on-screen buttons
+     *   render cramped for whichever port GamePrefs treated as "shared".
+     */
+    public GamePrefs( Context context, String md5, String crc, String headerName, String goodName,
+        String countrySymbol, AppData appData, GlobalPrefs globalPrefs, int rollbackForcedPlayerCount)
+    {
         mAppData = appData;
         mGlobalPrefs = globalPrefs;
         gameHeaderName = headerName;
@@ -607,7 +634,8 @@ public class GamePrefs
 
         // Peripheral share mode
         final String tmpControllerShared = mPreferences.getString( "inputShareController2", "default" );
-        isControllerShared = tmpControllerShared.equals("default") ? globalPrefs.isControllerShared : tmpControllerShared.equals( "Yes" );
+        isControllerShared = rollbackForcedPlayerCount > 0 ? false
+            : ( tmpControllerShared.equals("default") ? globalPrefs.isControllerShared : tmpControllerShared.equals( "Yes" ) );
 
         // Determine which peripheral controllers are enabled
         for(int index = 0; index < NUM_CONTROLLERS; ++index) {
@@ -623,6 +651,15 @@ public class GamePrefs
         isPlugged[1] = isControllerEnabled[1] && (playerMap.isPlayerAvailable(2) || isControllerShared || globalPrefs.allEmulatedControllersPlugged);
         isPlugged[2] = isControllerEnabled[2] && (playerMap.isPlayerAvailable(3) || isControllerShared || globalPrefs.allEmulatedControllersPlugged);
         isPlugged[3] = isControllerEnabled[3] && (playerMap.isPlayerAvailable(4) || isControllerShared || globalPrefs.allEmulatedControllersPlugged);
+
+        // Rollback netplay override: which ports exist in the emulated
+        // game is decided by the match (see constructor doc above), not
+        // by whichever local profiles this device happens to have saved.
+        if (rollbackForcedPlayerCount > 0) {
+            for (int index = 0; index < NUM_CONTROLLERS; ++index) {
+                isPlugged[index] = index < rollbackForcedPlayerCount;
+            }
+        }
 
         useDefaultCountPerOp = mPreferences.getBoolean( "screenAdvancedUseDefaultCountPerOp", true );
 
