@@ -391,6 +391,20 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
         mDrawerLayout = findViewById(R.id.drawerLayout);
         mGameSidebar = findViewById(R.id.gameSidebar);
 
+        // Enter immersive mode BEFORE the touch overlay is built and gets
+        // its first layout pass. hideSystemBars() used to run much later
+        // in onCreate() (after the overlay/skin were already set up), so
+        // VisibleTouchMap.resize() baked its button geometry against the
+        // smaller, system-bars-still-visible screen area. That stale
+        // geometry never got a chance to correct itself once we stopped
+        // GameActivity from being recreated on every config change (see
+        // the android:configChanges manifest change) - recreation used to
+        // paper over this by re-running onCreate() a second time, by
+        // which point the system bars had already settled, giving a
+        // correctly-sized do-over. Doing this here means the one and only
+        // layout pass already sees the final immersive dimensions.
+        hideSystemBars();
+
         // Don't darken the game screen when the drawer is open
         mDrawerLayout.setScrimColor(0x0);
 
@@ -546,8 +560,6 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
             }
             return false;
         });
-
-        hideSystemBars();
 
         mNetplayClientDialog = (NetplayClientSetupDialog) fm.findFragmentByTag(STATE_NETPLAY_CLIENT_DIALOG);
         mNetplayServerDialog = (NetplayServerSetupDialog) fm.findFragmentByTag(STATE_NETPLAY_SERVER_DIALOG);
