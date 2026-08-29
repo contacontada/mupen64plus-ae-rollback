@@ -1,5 +1,8 @@
 package paulscode.mupen64plusae.rollback;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
@@ -22,6 +25,8 @@ import android.widget.TextView;
 public class NetplayOverlayService extends Service {
 
     private static final String TAG = "NetplayOverlay";
+    private static final String FOREGROUND_CHANNEL_ID = "netplay_overlay_service";
+    private static final int FOREGROUND_NOTIFICATION_ID = 4202;
     private WindowManager windowManager;
     private LinearLayout overlayView;
     private TextView pingText;
@@ -34,10 +39,47 @@ public class NetplayOverlayService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        // This service is started via startForegroundService() from
+        // RollbackNetplayService, which contractually requires calling
+        // Service.startForeground() within a few seconds or the OS kills
+        // the *entire app process* with a fatal
+        // ForegroundServiceDidNotStartInTimeException - this service never
+        // did, so every rollback match was crashing the whole process
+        // outright a few seconds after starting (looking like the match
+        // just froze - no Java exception, no graceful shutdown, since the
+        // process was killed out from under everything). Must be the very
+        // first thing in onCreate(), before any WindowManager/overlay work
+        // that could itself take time or fail.
+        startForegroundCompat();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         handler = new Handler(Looper.getMainLooper());
         createOverlay();
         startUpdating();
+    }
+
+    private void startForegroundCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null && nm.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
+                NotificationChannel channel = new NotificationChannel(
+                    FOREGROUND_CHANNEL_ID, "Netplay Stats Overlay",
+                    NotificationManager.IMPORTANCE_MIN);
+                channel.setShowBadge(false);
+                nm.createNotificationChannel(channel);
+            }
+        }
+        Notification notification = new Notification.Builder(this, FOREGROUND_CHANNEL_ID)
+            .setContentTitle("Netplay Stats")
+            .setContentText("Showing ping/frame overlay")
+            .setSmallIcon(android.R.drawable.ic_menu_compass)
+            .setOngoing(true)
+            .build();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(FOREGROUND_NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(FOREGROUND_NOTIFICATION_ID, notification);
+        }
     }
 
     @Override
@@ -48,6 +90,7 @@ public class NetplayOverlayService extends Service {
                 windowManager.removeView(overlayView);
             } catch (Exception e) { /* ignore */ }
         }
+        stopForeground(true);
         super.onDestroy();
     }
 

@@ -94,8 +94,7 @@ public class RollbackNetplayService extends Service {
 
         Object waitHandle = RollbackGameBridge.beginWaitForCoreReady(this);
 
-        Intent intent = new Intent();
-        intent.setClassName(this, "paulscode.android.mupen64plusae.game.GameActivity");
+        Intent intent = new Intent(this, paulscode.android.mupen64plusae.game.GameActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(RollbackGameLaunchKeys.ROM_PATH, romPath);
         intent.putExtra(RollbackGameLaunchKeys.ZIP_PATH, zipPath);
@@ -147,6 +146,13 @@ public class RollbackNetplayService extends Service {
     @Override
     public void onCreate() {
         RollbackCrashLogger.install(this);
+        // Covers Java exceptions. A native (C/C++) crash bypasses that
+        // entirely and takes the whole process down before any Java code
+        // can run - install a matching handler on the native side too, so
+        // *that* class of crash leaves a trace as well instead of just
+        // looking like a silent freeze.
+        java.io.File nativeCrashFile = new java.io.File(getExternalFilesDir(null), "rollback_native_crash.txt");
+        RollbackNative.nativeSetCrashLogPath(nativeCrashFile.getAbsolutePath());
         super.onCreate();
         lobbyClient = new RmgkLobbyClient();
         lobbyClient.addListener(lobbyListener);

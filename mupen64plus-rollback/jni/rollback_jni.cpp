@@ -33,9 +33,116 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <signal.h>
 
 static int g_UdpSocket = -1;
 static std::string g_LastNativeError;
+
+// --- Native crash marker -----------------------------------------------
+//
+// RollbackCrashLogger.java catches uncaught *Java* exceptions and writes
+// them to a file the user can read without adb. It cannot see native
+// (C/C++) crashes at all - a SIGSEGV/SIGABRT here takes down the whole
+// process instantly, before any Java code (including that handler) ever
+// runs, and before RollbackNetplayService.onDestroy() can log anything.
+// From the outside this looks exactly like "the match froze": input stops,
+// nothing renders, and the next log entry is a brand new process/PID with
+// no shutdown log in between - because there was no shutdown, just a kill.
+//
+// This installs a signal handler that writes a minimal marker (signal
+// number/name, faulting address, timestamp) to a plain text file before
+// the process goes down, then re-raises the signal so the OS's normal
+// tombstone generation still happens unchanged. Deliberately uses only
+// low-level POSIX calls (open/write/close), not fopen/malloc/std::string
+// formatting - the C++ heap and libc streams can themselves be in a bad
+// state during a crash, and this only needs to survive long enough to
+// write a couple hundred bytes.
+static char g_CrashLogPath[512] = {0};
+
+static const char* signalName(int sig) {
+    switch (sig) {
+        case SIGSEGV: return "SIGSEGV";
+        case SIGABRT: return "SIGABRT";
+        case SIGBUS:  return "SIGBUS";
+        case SIGFPE:  return "SIGFPE";
+        case SIGILL:  return "SIGILL";
+        default:      return "UNKNOWN";
+    }
+}
+
+// Minimal itoa for use inside the signal handler (no malloc, no locale).
+static char* writeUInt(char* buf, unsigned long v) {
+    char tmp[20];
+    int n = 0;
+    if (v == 0) tmp[n++] = '0';
+    while (v > 0) { tmp[n++] = '0' + (v % 10); v /= 10; }
+    while (n > 0) *buf++ = tmp[--n];
+    return buf;
+}
+
+static void nativeCrashHandler(int sig, siginfo_t* info, void* /*ucontext*/) {
+    if (g_CrashLogPath[0] != '\0') {
+        char msg[512];
+        char* p = msg;
+        const char* prefix = "Rollback Netplay native crash\nSignal: ";
+        for (const char* c = prefix; *c; ++c) *p++ = *c;
+        for (const char* c = signalName(sig); *c; ++c) *p++ = *c;
+        const char* signumLabel = " (";
+        for (const char* c = signumLabel; *c; ++c) *p++ = *c;
+        p = writeUInt(p, (unsigned long) sig);
+        *p++ = ')'; *p++ = '\n';
+        if (info != nullptr) {
+            const char* addrLabel = "Faulting address: 0x";
+            for (const char* c = addrLabel; *c; ++c) *p++ = *c;
+            char hex[17];
+            unsigned long addr = (unsigned long) info->si_addr;
+            const char* digits = "0123456789abcdef";
+            int hn = 0;
+            if (addr == 0) hex[hn++] = '0';
+            while (addr > 0) { hex[hn++] = digits[addr % 16]; addr /= 16; }
+            while (hn > 0) *p++ = hex[--hn];
+            *p++ = '\n';
+        }
+        int fd = open(g_CrashLogPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd >= 0) {
+            write(fd, msg, (size_t)(p - msg));
+            close(fd);
+        }
+    }
+
+    // Restore the default handler and re-raise so the OS still produces
+    // its normal tombstone/crash-reporting exactly as if this handler
+    // were never installed - this only adds a marker, it never suppresses
+    // the crash.
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeSetCrashLogPath(
+    JNIEnv* env, jclass, jstring path) {
+    if (path == nullptr) return;
+    const char* cpath = env->GetStringUTFChars(path, nullptr);
+    if (cpath != nullptr) {
+        strncpy(g_CrashLogPath, cpath, sizeof(g_CrashLogPath) - 1);
+        g_CrashLogPath[sizeof(g_CrashLogPath) - 1] = '\0';
+        env->ReleaseStringUTFChars(path, cpath);
+
+        struct sigaction sa{};
+        sa.sa_sigaction = nativeCrashHandler;
+        sa.sa_flags = SA_SIGINFO;
+        sigemptyset(&sa.sa_mask);
+        sigaction(SIGSEGV, &sa, nullptr);
+        sigaction(SIGABRT, &sa, nullptr);
+        sigaction(SIGBUS, &sa, nullptr);
+        sigaction(SIGFPE, &sa, nullptr);
+        sigaction(SIGILL, &sa, nullptr);
+        LOGI("Native crash handler installed, writing to: %s", g_CrashLogPath);
+    }
+}
+// -------------------------------------------------------------------------
+
 
 static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) {
     if (g_UdpSocket < 0 || !addr || !data || length <= 0) return;
