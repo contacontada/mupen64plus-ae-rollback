@@ -372,6 +372,24 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
             CountryCode.getCountryCode(mRomCountryCode).toString(), mAppData, mGlobalPrefs,
             mIsRollbackMode ? mRollbackNumPlayers : 0 );
 
+        // Lock the screen orientation BEFORE any layout happens. This used
+        // to only happen in onGameStarted() - long after setContentView()
+        // and the touch overlay were already set up and measured - so the
+        // overlay's one-and-only layout pass could bake its button
+        // geometry against whatever orientation the phone physically
+        // happened to be held in at launch, not the orientation the game
+        // actually wants. Physically rotating the phone after launch was
+        // masking this by forcing a fresh, correctly-oriented layout pass
+        // (and, before the android:configChanges fix, an orientation
+        // mismatch here would trigger a config-change recreate that
+        // accidentally re-measured everything correctly the second time
+        // around too) - same class of bug as the hideSystemBars() timing
+        // issue above. Setting this here means the very first layout pass
+        // already reflects the final target orientation.
+        if (mGlobalPrefs.displayOrientation != -1) {
+            setRequestedOrientation( mGlobalPrefs.displayOrientation );
+        }
+
         final Window window = this.getWindow();
 
         // Enable full-screen mode

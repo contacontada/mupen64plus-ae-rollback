@@ -162,6 +162,7 @@ public class RollbackNetplayService extends Service {
         // was queued by the OS. Being a foreground service for the whole
         // lifetime of the match grants that exemption.
         startForegroundCompat();
+        RollbackDebugLog.log(this, "RollbackNetplayService", "onCreate() ENTER");
         Log.i(TAG, "RollbackNetplayService created");
     }
 
@@ -192,6 +193,18 @@ public class RollbackNetplayService extends Service {
 
     @Override
     public void onDestroy() {
+        // Log with a stack trace, not just a marker - onDestroy() firing
+        // mid-match is exactly the "paralyzed" symptom (it's the only
+        // caller of nativeRequestStop()), and nothing in this file calls
+        // stopSelf()/unbindService() that would explain it firing ~15s
+        // into a session. The trace here won't show WHO externally tore
+        // the service down (Android doesn't hand that information to
+        // onDestroy()), but combined with logcat from the same moment
+        // (system-initiated stops always log a reason there, e.g.
+        // "app requested" vs a low-memory/ANR kill) it narrows things
+        // down a lot faster than guessing blind again.
+        RollbackDebugLog.log(this, "RollbackNetplayService",
+            "onDestroy() ENTER - stack: " + Log.getStackTraceString(new Exception("onDestroy trace")));
         stop();
         lobbyClient.disconnectFromServer();
         executor.shutdown();
@@ -361,6 +374,8 @@ public class RollbackNetplayService extends Service {
      * Stop the current session.
      */
     public void stop() {
+        RollbackDebugLog.log(this, "RollbackNetplayService",
+            "stop() ENTER - stack: " + Log.getStackTraceString(new Exception("stop() trace")));
         RollbackNative.nativeRequestStop();
         RollbackNative.nativeCloseSession();
         notifyStatus("Stopped");
