@@ -162,6 +162,13 @@ public class CoreFragment extends Fragment implements CoreServiceListener, CoreS
         int mVideoRenderWidth = 0;
         int mVideoRenderHeight = 0;
         boolean mUsingNetplay = false;
+        // 0 = not a rollback match. Otherwise the number of N64 controller
+        // ports the match needs plugged in - see GamePrefs'
+        // rollbackForcedPlayerCount and StartCoreServiceParams. CoreService
+        // runs in a separate process (:EmulationProcess) and builds its own
+        // GamePrefs from Intent extras, so this has to cross that boundary
+        // as a primitive, same as every other field here.
+        int mRollbackNumPlayers = 0;
         boolean mIsRunning = false;
         File mCurrentSaveStateFile = null;
         boolean mUseCustomSpeed = false;
@@ -372,7 +379,8 @@ public class CoreFragment extends Fragment implements CoreServiceListener, CoreS
 
     public void startCore(GlobalPrefs globalPrefs, GamePrefs gamePrefs, String romGoodName, String romDisplayName,
                           String romPath, String zipPath, String romMd5, String romCrc, String romHeaderName, byte romCountryCode, String romArtPath,
-                          boolean isRestarting, int videoRenderWidth, int videoRenderHeight, boolean usingNetplay)
+                          boolean isRestarting, int videoRenderWidth, int videoRenderHeight, boolean usingNetplay,
+                          int rollbackNumPlayers)
     {
         Log.i(TAG, "startCore");
 
@@ -391,6 +399,7 @@ public class CoreFragment extends Fragment implements CoreServiceListener, CoreS
         mViewModel.mVideoRenderWidth = videoRenderWidth;
         mViewModel.mVideoRenderHeight = videoRenderHeight;
         mViewModel.mUsingNetplay = usingNetplay;
+        mViewModel.mRollbackNumPlayers = rollbackNumPlayers;
 
         if(!mViewModel.mIsRunning)
         {
@@ -448,6 +457,7 @@ public class CoreFragment extends Fragment implements CoreServiceListener, CoreS
         params.setVideoRenderWidth(mViewModel.mVideoRenderWidth);
         params.setVideoRenderHeight(mViewModel.mVideoRenderHeight);
         params.setUsingNetplay(mViewModel.mUsingNetplay);
+        params.setRollbackNumPlayers(mViewModel.mRollbackNumPlayers);
 
         ActivityHelper.startCoreService(activity.getApplicationContext(), mViewModel.mServiceConnection, params);
     }

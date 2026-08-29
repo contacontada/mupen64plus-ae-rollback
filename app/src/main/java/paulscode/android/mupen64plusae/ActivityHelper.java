@@ -116,6 +116,12 @@ public class ActivityHelper
         // signals RollbackGameBridge once ready so RollbackNetplayService
         // can take over frame-by-frame execution.
         public static final String ROLLBACK_MODE        = NAMESPACE + "ROLLBACK_MODE";
+        // How many N64 controller ports the rollback match needs plugged
+        // in (0 = not a rollback match). CoreService runs in its own
+        // process and builds its own GamePrefs from these extras, so this
+        // has to be forwarded the same way as every other startup param -
+        // see GamePrefs.rollbackForcedPlayerCount.
+        public static final String ROLLBACK_NUM_PLAYERS = NAMESPACE + "ROLLBACK_NUM_PLAYERS";
 
 
         //@formatter:on
@@ -426,6 +432,7 @@ public class ActivityHelper
         intent.putExtra(Keys.VIDEO_RENDER_WIDTH, params.getVideoRenderWidth());
         intent.putExtra(Keys.VIDEO_RENDER_HEIGHT, params.getVideoRenderHeight());
         intent.putExtra(Keys.NETPLAY_ENABLED, params.isUsingNetplay());
+        intent.putExtra(Keys.ROLLBACK_NUM_PLAYERS, params.getRollbackNumPlayers());
 
         context.startService(intent);
         context.bindService(intent, serviceConnection, 0);

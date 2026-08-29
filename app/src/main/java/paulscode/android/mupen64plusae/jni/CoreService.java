@@ -1032,9 +1032,11 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
             mVideoRenderWidth = extras.getInt( ActivityHelper.Keys.VIDEO_RENDER_WIDTH );
             mVideoRenderHeight = extras.getInt( ActivityHelper.Keys.VIDEO_RENDER_HEIGHT );
             mUsingNetplay = extras.getBoolean(ActivityHelper.Keys.NETPLAY_ENABLED);
+            int rollbackNumPlayers = extras.getInt(ActivityHelper.Keys.ROLLBACK_NUM_PLAYERS, 0);
 
             mGamePrefs = new GamePrefs( this, mRomMd5, mRomCrc, mRomHeaderName, mRomGoodName,
-                    CountryCode.getCountryCode(mRomCountryCode).toString(), mAppData, mGlobalPrefs );
+                    CountryCode.getCountryCode(mRomCountryCode).toString(), mAppData, mGlobalPrefs,
+                    rollbackNumPlayers );
 
             mGameDataManager = new GameDataManager(mGlobalPrefs, mGamePrefs, mGlobalPrefs.maxAutoSaves);
             mGameDataManager.makeDirs();

@@ -40,6 +40,9 @@ public class StartCoreServiceParams
     private int videoRenderWidth;
     private int videoRenderHeight;
     private boolean usingNetplay;
+    // 0 = not a rollback match, else the number of controller ports the
+    // match needs plugged in. See GamePrefs.rollbackForcedPlayerCount.
+    private int rollbackNumPlayers;
 
     public String getRomGoodName() {
         return romGoodName;
@@ -151,6 +154,14 @@ public class StartCoreServiceParams
 
     public boolean isUsingNetplay() {
         return this.usingNetplay;
+    }
+
+    public void setRollbackNumPlayers(int rollbackNumPlayers) {
+        this.rollbackNumPlayers = rollbackNumPlayers;
+    }
+
+    public int getRollbackNumPlayers() {
+        return this.rollbackNumPlayers;
     }
 
 }

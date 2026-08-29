@@ -617,7 +617,7 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
                         mRomMd5, mRomCrc, mRomHeaderName, mRomCountryCode, mRomArtPath, mDoRestart,
                         mDisplayResolutionData.getResolutionWidth(mGamePrefs.verticalRenderResolution),
                         mDisplayResolutionData.getResolutionHeight(mGamePrefs.verticalRenderResolution),
-                        mIsNetplayEnabled);
+                        mIsNetplayEnabled, mIsRollbackMode ? mRollbackNumPlayers : 0);
             }
 
             // Try running now in case the core service has already started
