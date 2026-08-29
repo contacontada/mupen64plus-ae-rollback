@@ -23,6 +23,9 @@
 #include "n64_cic_nus_6105.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -36,6 +39,7 @@
 #include "plugin/plugin.h"
 #include "main/netplay.h"
 #include "main/pif_sync_callback.h"
+#include "osal/files.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -63,16 +67,6 @@ void print_pif(struct pif* pif)
 }
 #endif
 
-/* ------------------------------------------------------------------------
- * Rollback netcode: controller-input injection (ported from RMG-K).
- *
- * GekkoNet needs to feed the exact input a given frame should use (either
- * locally polled, or a value predicted/rolled back for a remote player)
- * directly into the PIF's controller-read response, instead of letting the
- * normal input plugin poll hardware. This intercepts the JCMD_CONTROLLER_READ
- * response for up to ROLLBACK_INPUT_PLAYERS channels once the frontend has
- * registered a callback via M64CMD_ROLLBACK_SET_INPUT_CALLBACK.
- * ------------------------------------------------------------------------ */
 enum { ROLLBACK_INPUT_PLAYERS = 4 };
 
 static m64p_rollback_input_callback l_rollback_input_callback = NULL;
@@ -82,14 +76,18 @@ static int l_rollback_input_players = 0;
 
 static uint32_t rollback_read_controller_input(const uint8_t* rx_buf)
 {
-    uint32_t value;
-    memcpy(&value, rx_buf, sizeof(value));
-    return value;
+    return ((uint32_t)rx_buf[0] << 24)
+        | ((uint32_t)rx_buf[1] << 16)
+        | ((uint32_t)rx_buf[2] << 8)
+        | (uint32_t)rx_buf[3];
 }
 
 static void rollback_write_controller_input(uint8_t* rx_buf, uint32_t value)
 {
-    memcpy(rx_buf, &value, sizeof(value));
+    rx_buf[0] = (uint8_t)((value >> 24) & 0xff);
+    rx_buf[1] = (uint8_t)((value >> 16) & 0xff);
+    rx_buf[2] = (uint8_t)((value >> 8) & 0xff);
+    rx_buf[3] = (uint8_t)(value & 0xff);
 }
 
 static int rollback_channel_has_command(const struct pif_channel* channel)
@@ -100,9 +98,102 @@ static int rollback_channel_has_command(const struct pif_channel* channel)
         && channel->rx_buf != NULL;
 }
 
-/* When the rollback callback owns a channel, make sure the PIF sees a
- * "controller present" response for it even if no real ijbd is attached
- * (e.g. headless/rollback-only players in a netplay session). */
+static int rollback_verbose_pif_input_logging_enabled(void)
+{
+    const char* value = getenv("RMGK_VERBOSE_PIF_INPUT_LOGGING");
+    return value != NULL && value[0] == '1';
+}
+
+static const char* rollback_log_path_separator(const char* directory)
+{
+    size_t length;
+    char last;
+
+    if (directory == NULL) {
+        return "";
+    }
+
+    length = strlen(directory);
+    if (length == 0) {
+        return "";
+    }
+
+    last = directory[length - 1];
+    return (last == '/' || last == '\\') ? "" : "/";
+}
+
+static FILE* rollback_open_log_file(const char* suffix)
+{
+    const char* directory = getenv("RMGK_ROLLBACK_LOG_DIR");
+    const char* prefix = getenv("RMGK_ROLLBACK_LOG_PREFIX");
+    char path[PATH_MAX];
+    int written;
+    FILE* file;
+
+    if (directory != NULL && directory[0] != '\0' && prefix != NULL && prefix[0] != '\0') {
+        written = snprintf(path, sizeof(path), "%s%s%s_%s.log",
+            directory,
+            rollback_log_path_separator(directory),
+            prefix,
+            suffix);
+        if (written > 0 && (size_t)written < sizeof(path)) {
+            file = fopen(path, "a");
+            if (file != NULL) {
+                return file;
+            }
+        }
+    }
+
+    osal_mkdirp("Logs", 0700);
+    written = snprintf(path, sizeof(path), "Logs%srollback_%s.log", rollback_log_path_separator("Logs"), suffix);
+    if (written > 0 && (size_t)written < sizeof(path)) {
+        file = fopen(path, "a");
+        if (file != NULL) {
+            return file;
+        }
+    }
+
+    osal_mkdirp("Bin/Release/Logs", 0700);
+    written = snprintf(path, sizeof(path), "Bin/Release/Logs%srollback_%s.log",
+        rollback_log_path_separator("Bin/Release/Logs"),
+        suffix);
+    if (written > 0 && (size_t)written < sizeof(path)) {
+        return fopen(path, "a");
+    }
+
+    return NULL;
+}
+
+static void rollback_log_pif_channel(const char* phase, size_t index, const struct pif_channel* channel)
+{
+    FILE* file;
+
+    if (!rollback_verbose_pif_input_logging_enabled() || l_rollback_input_callback == NULL || l_rollback_input_players <= 0 || !rollback_channel_has_command(channel)) {
+        return;
+    }
+
+    file = rollback_open_log_file("pif");
+    if (file == NULL) {
+        return;
+    }
+
+    fprintf(file,
+        "phase=%s ch=%u tx=0x%02x rx=0x%02x cmd=0x%02x ijbd=%d rx0=0x%02x rx1=0x%02x rx2=0x%02x rx3=0x%02x rx32=0x%02x\n",
+        phase,
+        (unsigned)index,
+        (unsigned)*channel->tx,
+        (unsigned)*channel->rx,
+        (unsigned)channel->tx_buf[0],
+        channel->ijbd != NULL,
+        (unsigned)channel->rx_buf[0],
+        (unsigned)channel->rx_buf[1],
+        (unsigned)channel->rx_buf[2],
+        (unsigned)channel->rx_buf[3],
+        (unsigned)channel->rx_buf[32]);
+
+    fclose(file);
+}
+
 static void rollback_force_controller_present(struct pif_channel* channel)
 {
     if (!rollback_channel_has_command(channel)) {
@@ -150,8 +241,6 @@ static int rollback_should_skip_raw_pif_channel(size_t player)
         && Controls[player].RawData;
 }
 
-/* Call once per frame, before the first PIF update of that frame, so a
- * stale prediction from a previous frame is never reused. */
 void pif_begin_rollback_input_frame(void)
 {
     l_rollback_input_valid = 0;
@@ -179,11 +268,6 @@ void pif_set_rollback_input_players(int players)
     l_rollback_input_valid = 0;
 }
 
-/* Asks the frontend (GekkoNet, via rollback_jni.cpp) for the input each
- * rollback-controlled player should use this frame, and overwrites the
- * PIF's controller-read response with it. Cached for the rest of the
- * current frame (pif_begin_rollback_input_frame resets the cache), since
- * a single frame's PIF exchange can be processed more than once. */
 static void rollback_sync_input(struct pif* pif)
 {
     uint32_t input_values[ROLLBACK_INPUT_PLAYERS] = { 0 };
@@ -558,10 +642,14 @@ void update_pif_ram(struct pif* pif)
     for (k = 0; k < PIF_CHANNELS_COUNT; ++k) {
         if (rollback_should_skip_raw_pif_channel(k)) {
             skipped_raw_pif_channel = 1;
+            rollback_log_pif_channel("skip-before", k, &pif->channels[k]);
             rollback_force_controller_present(&pif->channels[k]);
+            rollback_log_pif_channel("skip-after", k, &pif->channels[k]);
             continue;
         }
+        rollback_log_pif_channel("native-before", k, &pif->channels[k]);
         process_channel(&pif->channels[k]);
+        rollback_log_pif_channel("native-after", k, &pif->channels[k]);
     }
 
     /* Zilmar-Spec plugin expect a call with control_id = -1 when RAM processing is done */
@@ -571,6 +659,9 @@ void update_pif_ram(struct pif* pif)
 
     netplay_update_input(pif);
     rollback_sync_input(pif);
+    for (k = 0; k < PIF_CHANNELS_COUNT; ++k) {
+        rollback_log_pif_channel("post-rollback", k, &pif->channels[k]);
+    }
     call_pif_sync_callback(pif);
 
 #ifdef DEBUG_PIF
@@ -585,4 +676,3 @@ void hw2_int_handler(void* opaque)
 
     raise_maskable_interrupt(pif->r4300, CP0_CAUSE_IP4);
 }
-
