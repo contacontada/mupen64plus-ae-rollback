@@ -425,7 +425,16 @@ public class RmgkLobbyClient {
         try {
             JSONObject data = new JSONObject();
             data.put("username", pendingUsername);
-            data.put("clientVersion", "1.0.0-android");
+            // The lobby server now gates login on a minimum client version
+            // (added in RMG-K 0.9.13 - see RollbackLobbyDialog::onHelloFailed
+            // upstream, "requires RMG-K 9.13 or vdev-2367 or newer"). The
+            // desktop client reports its actual build version here
+            // (CoreGetVersion(), a git tag like "0.9.13"). We had a made-up
+            // "1.0.0-android" scheme that has no relationship to RMG-K's
+            // versioning, so the server always rejected it as too old.
+            // Report the RMG-K release this port is tracking instead, since
+            // that's what the server's version gate actually understands.
+            data.put("clientVersion", "0.9.13");
             JSONArray romArr = new JSONArray();
             for (String h : pendingRomHashes) romArr.put(h);
             data.put("romHashes", romArr);
