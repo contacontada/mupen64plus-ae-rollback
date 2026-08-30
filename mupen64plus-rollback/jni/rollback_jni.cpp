@@ -1226,6 +1226,13 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     (void)env;
     (void)clazz;
 
+    // Unconditional build marker - no logic gates this, it always fires
+    // exactly once per nativeExecute() call. If this line is ever
+    // missing from the log, the running .so predates this patch (a stale
+    // build), full stop - nothing else in this diagnosis matters until
+    // that's fixed first.
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch44)");
+
     if (!g_GekkoSession) {
         LOGE("No active session");
         g_LastNativeError = "nativeExecute() called with no active session (g_GekkoSession is null)";
