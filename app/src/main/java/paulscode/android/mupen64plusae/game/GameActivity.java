@@ -1403,6 +1403,19 @@ public class GameActivity extends AppCompatActivity implements PromptConfirmList
             }
         }
 
+        if (mIsRollbackMode) {
+            // RollbackNetplayService is now explicitly started (see
+            // RollbackNetplayActivity), not just bound, specifically so
+            // it no longer gets torn down by the system mid-match just
+            // because its binding Activity's task went to the
+            // background. That means it now needs an explicit stop when
+            // the match actually ends - this is that call. If the lobby
+            // Activity is still bound in the background, the service
+            // correctly stays alive until that unbinds too; this only
+            // clears the "started" half of its lifecycle.
+            stopService(new Intent(this, paulscode.mupen64plusae.rollback.RollbackNetplayService.class));
+        }
+
         finishActivity();
     }
 

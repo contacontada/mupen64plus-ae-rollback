@@ -47,6 +47,18 @@ public class RollbackNetplayActivity extends AppCompatActivity {
 
     private RollbackNetplayService netplayService;
     private boolean serviceBound = false;
+    // Tracks whether a match has actually started, so onDestroy() knows
+    // whether it's safe to stop the (now explicitly-started, see
+    // startForegroundService() above) service. This Activity is commonly
+    // still alive - just backgrounded, not destroyed - while GameActivity
+    // runs a match in a separate task; if it DOES get destroyed by the
+    // system during an active match, the service must NOT be stopped
+    // here (GameActivity.shutdownEmulator() is the one place that should
+    // stop it once the match genuinely ends), or we'd reintroduce a
+    // variant of the exact "match dies for no visible reason" bug this
+    // was meant to fix - just through an explicit call instead of the
+    // system's implicit stopWithTask teardown.
+    private volatile boolean mMatchStarted = false;
 
     // UI
     private DrawerLayout drawerLayout;
@@ -153,14 +165,38 @@ public class RollbackNetplayActivity extends AppCompatActivity {
         initSidebar();
         initRecyclerViews();
 
-        // Bind service
+        // Bind service.
+        //
+        // This is ALSO explicitly started (not just bound) via
+        // startForegroundService() below. A service that is only ever
+        // bound (never started) is torn down by the system as soon as
+        // this Activity's task goes away for any reason (stopWithTask
+        // defaults to true) - being a foreground service does not
+        // protect against that specific case, only against low-memory
+        // kills. That was silently ending every match ~15-20s in with no
+        // crash and no error: the system was intentionally stopping the
+        // service via a normal ActivityThread.handleStopService() IPC
+        // (confirmed from a stack trace once we started logging
+        // onDestroy()), which then called nativeRequestStop() same as a
+        // deliberate "leave match" would. Explicitly starting it here
+        // gives it its own independent lifecycle that survives regardless
+        // of what happens to this Activity/task - it will now only stop
+        // when the app actually calls stop()/stopSelf() on it.
         Intent serviceIntent = new Intent(this, RollbackNetplayService.class);
+        startForegroundService(serviceIntent);
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onDestroy() {
         if (serviceBound) unbindService(serviceConnection);
+        // Only stop the service here if no match ever started on it - see
+        // the mMatchStarted field doc above. If a match IS active, leave
+        // the service's "started" lifecycle alone; GameActivity is the
+        // one that stops it once the match actually ends.
+        if (!mMatchStarted) {
+            stopService(new Intent(this, RollbackNetplayService.class));
+        }
         super.onDestroy();
     }
 
@@ -487,6 +523,7 @@ public class RollbackNetplayActivity extends AppCompatActivity {
 
         @Override
         public void onMatchStarted() {
+            mMatchStarted = true;
             runOnUiThread(() -> {
                 matchStatusText.setText("Match Running");
                 matchSubStatusText.setText("Rollback netcode active");
