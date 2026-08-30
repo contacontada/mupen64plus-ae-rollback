@@ -338,6 +338,24 @@ static std::vector<int> g_GekkoPlayerHandles;
 static std::vector<int> g_GekkoLocalHandles;
 static std::vector<unsigned char> g_GekkoLatchedInput;
 static bool g_GekkoHasLatchedInput = false;
+// g_GekkoLatchedInput/g_GekkoHasLatchedInput are written by latchGekkoInput()
+// on the rollback/netplay thread (inside gekkoTick()) and read by
+// rollbackInputCallback() on the SEPARATE emulation thread (see
+// main_rollback_run_frame()'s own comment: it blocks the calling thread
+// while a different thread actually executes the frame - that's where
+// PIF's rollback_sync_input() ends up invoking this callback). A plain
+// bool/vector shared across real OS threads with no synchronization has
+// no visibility guarantee on ARM's weak memory model - the writing
+// thread's update to g_GekkoHasLatchedInput was never guaranteed to
+// become visible to the emulation thread at all, which is exactly why
+// rollbackInputCallback() was failing on *every single call* ("FAIL no
+// latched input") even though latchGekkoInput() was genuinely running
+// and setting it - frames kept advancing and audio kept playing (the
+// core doesn't need synced input for that), but the game only ever saw
+// zeroed controller state. This mutex is the fix: it gives both sides an
+// actual happens-before relationship, independent of whatever mechanism
+// (busy-wait or otherwise) triggers the frame on the other thread.
+static std::mutex g_GekkoLatchedInputMutex;
 static std::atomic_bool g_GekkoExecuting{false};
 static std::atomic_bool g_GekkoStopRequested{false};
 static int g_GekkoLastDesyncFrame = -1;
@@ -491,6 +509,9 @@ static int rollbackInputCallback(void* values, int size, int players) {
         if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL no session (call #%d)", calls);
         return 0;
     }
+
+    std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+
     if (!g_GekkoHasLatchedInput) {
         g_DiagCallbackFailNoLatch++;
         if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL no latched input (call #%d)", calls);
@@ -561,6 +582,8 @@ static bool latchGekkoInput(const GekkoGameEvent* event) {
     if (!event->data.adv.inputs || static_cast<int>(event->data.adv.input_len) < actorBytes) {
         return false;
     }
+
+    std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
 
     if (static_cast<int>(g_GekkoLatchedInput.size()) != expectedBytes) {
         g_GekkoLatchedInput.resize(static_cast<size_t>(expectedBytes));
@@ -650,7 +673,10 @@ static int gekkoTick() {
         return 0;
     }
 
-    g_GekkoHasLatchedInput = false;
+    {
+        std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+        g_GekkoHasLatchedInput = false;
+    }
 
     gekko_network_poll(g_GekkoSession);
     // Process session events (desync, disconnect, etc.)
@@ -771,7 +797,10 @@ static int gekkoTick() {
                             + std::to_string(event->data.adv.frame);
                         return 0;
                     }
-                    g_GekkoHasLatchedInput = false;
+                    {
+                        std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+                        g_GekkoHasLatchedInput = false;
+                    }
                 } else {
                     // Real visible frame — run with video+audio output
                     if (!coreRollbackRunFrame(M64FRAME_OUTPUT_VIDEO | M64FRAME_OUTPUT_AUDIO)) {
@@ -805,7 +834,10 @@ static int rollbackBeginFrame(void* userData) {
 
 static int rollbackEndFrame(void* userData) {
     (void)userData;
-    g_GekkoHasLatchedInput = false;
+    {
+        std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+        g_GekkoHasLatchedInput = false;
+    }
     return 1;
 }
 
@@ -920,7 +952,10 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartP2PSession(
     g_GekkoPlayerHandles.assign(players, -1);
     g_GekkoLocalHandles.assign(players, -1);
     g_GekkoLatchedInput.assign(players * inputSize, 0);
-    g_GekkoHasLatchedInput = false;
+    {
+        std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+        g_GekkoHasLatchedInput = false;
+    }
 
     std::string remoteAddr = std::string(remote) + ":" + std::to_string(remotePort);
 
@@ -1058,7 +1093,10 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeStartLobbySession(
     g_GekkoPlayerHandles.assign(players, -1);
     g_GekkoLocalHandles.assign(players, -1);
     g_GekkoLatchedInput.assign(players * inputSize, 0);
-    g_GekkoHasLatchedInput = false;
+    {
+        std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+        g_GekkoHasLatchedInput = false;
+    }
 
     // Pre-build remote address strings
     std::vector<std::string> remoteAddrStrings(numRemotes);
@@ -1237,7 +1275,10 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeCloseSession(
     g_GekkoPlayerHandles.clear();
     g_GekkoLocalHandles.clear();
     g_GekkoLatchedInput.clear();
-    g_GekkoHasLatchedInput = false;
+    {
+        std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
+        g_GekkoHasLatchedInput = false;
+    }
     g_GekkoExecuting.store(false);
     g_SpeedScale = 1.0;
     g_TimesyncTargetScale = 1.0;
