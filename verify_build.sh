@@ -54,8 +54,8 @@ done
 # Check JNI method match
 echo ""
 echo "3. Checking JNI methods..."
-JAVA_NATIVE=$(grep -c "native " mupen64plus-rollback/src/main/java/paulscode/mupen64plusae/rollback/RollbackNative.java 2>/dev/null || echo 0)
-CPP_NATIVE=$(grep -c "Java_paulscode" mupen64plus-rollback/jni/rollback_jni.cpp 2>/dev/null || echo 0)
+JAVA_NATIVE=$(grep -E -c "^[[:space:]]*public[[:space:]]+static[[:space:]]+native[[:space:]]" mupen64plus-rollback/src/main/java/paulscode/mupen64plusae/rollback/RollbackNative.java 2>/dev/null || echo 0)
+CPP_NATIVE=$(grep -E -c "^[[:space:]]*Java_paulscode" mupen64plus-rollback/jni/rollback_jni.cpp 2>/dev/null || echo 0)
 if [ "$JAVA_NATIVE" = "$CPP_NATIVE" ]; then
     echo "   OK: $JAVA_NATIVE Java native methods = $CPP_NATIVE JNI exports"
 else
@@ -99,10 +99,10 @@ fi
 # Check manifest
 echo ""
 echo "6. Checking manifests..."
-if grep -q "RollbackNetplay" app/src/main/AndroidManifest.xml; then
-    echo "   OK: app manifest has rollback activity"
+if grep -q "RollbackNetplay" app/src/main/AndroidManifest.xml || grep -q "RollbackNetplay" mupen64plus-rollback/src/main/AndroidManifest.xml; then
+    echo "   OK: rollback activity/service manifest declaration found"
 else
-    echo "   WARNING: app manifest missing rollback activity"
+    echo "   WARNING: rollback activity/service manifest declaration missing"
     WARNINGS=$((WARNINGS+1))
 fi
 

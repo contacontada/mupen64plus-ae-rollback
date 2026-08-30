@@ -58,7 +58,7 @@ public class RollbackNetplayActivity extends AppCompatActivity {
     // variant of the exact "match dies for no visible reason" bug this
     // was meant to fix - just through an explicit call instead of the
     // system's implicit stopWithTask teardown.
-    private volatile boolean mMatchStarted = false;
+    private boolean mMatchStarted = false;
 
     // UI
     private DrawerLayout drawerLayout;

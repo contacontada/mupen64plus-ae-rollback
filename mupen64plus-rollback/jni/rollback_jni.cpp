@@ -792,10 +792,27 @@ static int gekkoTick() {
 
                 if (event->data.adv.rolling_back || event->data.adv.running_ahead) {
                     // Hidden frame (rollback or runahead) — no video/audio output
-                    if (!coreRollbackRunFrame(0)) {
-                        g_LastNativeError = "gekkoTick: coreRollbackRunFrame(hidden) failed at frame "
-                            + std::to_string(event->data.adv.frame);
-                        return 0;
+                    {
+                        // Diagnostic: does the input callback actually fire
+                        // DURING this specific synchronous call, while we
+                        // know g_GekkoHasLatchedInput is true (we just set
+                        // it above)? If the call counts don't move at all
+                        // across this window, the callback is being invoked
+                        // from somewhere else entirely, asynchronously -
+                        // not from inside this frame's execution at all.
+                        int before = g_DiagCallbackCalls.load();
+                        if (!coreRollbackRunFrame(0)) {
+                            g_LastNativeError = "gekkoTick: coreRollbackRunFrame(hidden) failed at frame "
+                                + std::to_string(event->data.adv.frame);
+                            return 0;
+                        }
+                        int after = g_DiagCallbackCalls.load();
+                        static std::atomic<int> s_HiddenFrameDiagCount{0};
+                        if (s_HiddenFrameDiagCount.fetch_add(1) < 30) {
+                            nativeDebugLogf("RollbackInputDiag",
+                                "hidden frame: callback calls before=%d after=%d (delta=%d) during coreRollbackRunFrame(0)",
+                                before, after, after - before);
+                        }
                     }
                     {
                         std::lock_guard<std::mutex> lock(g_GekkoLatchedInputMutex);
@@ -803,10 +820,18 @@ static int gekkoTick() {
                     }
                 } else {
                     // Real visible frame — run with video+audio output
+                    int before = g_DiagCallbackCalls.load();
                     if (!coreRollbackRunFrame(M64FRAME_OUTPUT_VIDEO | M64FRAME_OUTPUT_AUDIO)) {
                         g_LastNativeError = "gekkoTick: coreRollbackRunFrame(visible) failed at frame "
                             + std::to_string(event->data.adv.frame);
                         return 0;
+                    }
+                    int after = g_DiagCallbackCalls.load();
+                    static std::atomic<int> s_VisibleFrameDiagCount{0};
+                    if (s_VisibleFrameDiagCount.fetch_add(1) < 30) {
+                        nativeDebugLogf("RollbackInputDiag",
+                            "visible frame: callback calls before=%d after=%d (delta=%d) during coreRollbackRunFrame(visible)",
+                            before, after, after - before);
                     }
                     hasRealAdvance = true;
                     deferSaves = true;

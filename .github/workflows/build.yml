@@ -76,12 +76,12 @@ jobs:
       run: |
         mkdir -p release-assets
         cp app/build/outputs/apk/release/Mupen64PlusAE-release.apk "release-assets/M64PLUS R.apk"
-        tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch42.tar.gz .
+        tar --exclude=.git --exclude=release-assets --exclude=.gradle --exclude='*/.gradle' --exclude=build --exclude='*/build' --exclude='*/externalNativeBuild' --exclude='*/.cxx' -czf release-assets/mupen64plus-ae-rollback-patch43.tar.gz .
 
     - name: Upload APK and source archive
       uses: actions/upload-artifact@v4
       with:
-        name: mupen64plus-ae-rollback-patch42-${{ env.SHA }}
+        name: mupen64plus-ae-rollback-patch43-${{ env.SHA }}
         path: release-assets/*
 
   release:
@@ -135,6 +135,6 @@ jobs:
         removeArtifacts: true
         replacesArtifacts: true
         tag: Pre-release
-        body: "Patch 42 build of M64PLUS R Rollback."
+        body: "Patch 43 build of M64PLUS R Rollback."
         artifacts: "dist/**/*"
         token: ${{ secrets.GITHUB_TOKEN }}
