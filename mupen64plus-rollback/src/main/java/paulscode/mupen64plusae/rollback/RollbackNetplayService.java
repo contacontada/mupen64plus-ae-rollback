@@ -154,6 +154,12 @@ public class RollbackNetplayService extends Service {
         // looking like a silent freeze.
         java.io.File nativeCrashFile = new java.io.File(getExternalFilesDir(null), "rollback_native_crash.txt");
         RollbackNative.nativeSetCrashLogPath(nativeCrashFile.getAbsolutePath());
+        // Same idea, but for the ongoing diagnostic logging inside the
+        // native rollback input path (see rollback_jni.cpp) - routes it
+        // into the same file "View Debug Log" already reads, since that's
+        // the only log the person can actually get to without adb.
+        java.io.File debugLogFile = new java.io.File(getExternalFilesDir(null), "rollback_debug.log");
+        RollbackNative.nativeSetDebugLogPath(debugLogFile.getAbsolutePath());
         super.onCreate();
         lobbyClient = new RmgkLobbyClient();
         lobbyClient.addListener(lobbyListener);

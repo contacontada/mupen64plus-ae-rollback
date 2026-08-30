@@ -18,6 +18,9 @@
 #include <algorithm>
 #include <cmath>
 #include <thread>
+#include <cstdio>
+#include <ctime>
+#include <cstdarg>
 
 #include <gekkonet.h>
 
@@ -37,6 +40,56 @@
 
 static int g_UdpSocket = -1;
 static std::string g_LastNativeError;
+
+// --- Native debug log (writes into the same rollback_debug.log the user
+// already knows how to retrieve, since adb/logcat isn't always available) --
+static char g_DebugLogPath[512] = {0};
+static std::mutex g_DebugLogMutex;
+
+static void nativeDebugLog(const char* tag, const char* message) {
+    LOGI("%s: %s", tag, message); // still goes to logcat too, in case adb IS available
+    if (g_DebugLogPath[0] == '\0') return;
+
+    std::lock_guard<std::mutex> lock(g_DebugLogMutex);
+    FILE* f = fopen(g_DebugLogPath, "a");
+    if (!f) return;
+
+    time_t now = time(nullptr);
+    struct tm tmNow{};
+    localtime_r(&now, &tmNow);
+    struct timespec ts{};
+    clock_gettime(CLOCK_REALTIME, &ts);
+    int millis = (int)(ts.tv_nsec / 1000000);
+
+    fprintf(f, "%02d:%02d:%02d.%03d [%d] %s: %s\n",
+        tmNow.tm_hour, tmNow.tm_min, tmNow.tm_sec, millis,
+        getpid(), tag, message);
+    fclose(f);
+}
+
+// printf-style convenience wrapper around nativeDebugLog() above.
+static void nativeDebugLogf(const char* tag, const char* fmt, ...) {
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    nativeDebugLog(tag, buf);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeSetDebugLogPath(
+    JNIEnv* env, jclass, jstring path) {
+    if (path == nullptr) return;
+    const char* cpath = env->GetStringUTFChars(path, nullptr);
+    if (cpath != nullptr) {
+        std::lock_guard<std::mutex> lock(g_DebugLogMutex);
+        strncpy(g_DebugLogPath, cpath, sizeof(g_DebugLogPath) - 1);
+        g_DebugLogPath[sizeof(g_DebugLogPath) - 1] = '\0';
+        env->ReleaseStringUTFChars(path, cpath);
+    }
+}
 
 // --- Native crash marker -----------------------------------------------
 //
@@ -426,25 +479,63 @@ static void applyFramePacing() {
 // ---------------------------------------------------------------------------
 // GekkoNet input synchronization callback
 // ---------------------------------------------------------------------------
+static std::atomic<int> g_DiagCallbackCalls{0};
+static std::atomic<int> g_DiagCallbackFailNoSession{0};
+static std::atomic<int> g_DiagCallbackFailNoLatch{0};
+static std::atomic<int> g_DiagCallbackSuccess{0};
+
 static int rollbackInputCallback(void* values, int size, int players) {
-    if (!g_GekkoSession || !g_GekkoHasLatchedInput) return 0;
+    int calls = g_DiagCallbackCalls.fetch_add(1);
+    if (!g_GekkoSession) {
+        g_DiagCallbackFailNoSession++;
+        if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL no session (call #%d)", calls);
+        return 0;
+    }
+    if (!g_GekkoHasLatchedInput) {
+        g_DiagCallbackFailNoLatch++;
+        if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL no latched input (call #%d)", calls);
+        return 0;
+    }
     int expectedBytes = g_GekkoPlayers * g_GekkoInputSize;
-    if (!values || size != g_GekkoInputSize || players < g_GekkoPlayers) return 0;
-    if (static_cast<int>(g_GekkoLatchedInput.size()) < expectedBytes) return 0;
+    if (!values || size != g_GekkoInputSize || players < g_GekkoPlayers) {
+        if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL bad args (size=%d expected=%d players=%d expectedPlayers=%d)",
+            size, g_GekkoInputSize, players, g_GekkoPlayers);
+        return 0;
+    }
+    if (static_cast<int>(g_GekkoLatchedInput.size()) < expectedBytes) {
+        if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL latched buffer too small (%zu < %d)",
+            g_GekkoLatchedInput.size(), expectedBytes);
+        return 0;
+    }
 
     std::memset(values, 0, static_cast<size_t>(size) * static_cast<size_t>(players));
     std::memcpy(values, g_GekkoLatchedInput.data(), static_cast<size_t>(expectedBytes));
+
+    int succ = g_DiagCallbackSuccess.fetch_add(1);
+    if (succ < 200) {
+        uint32_t p0 = 0;
+        std::memcpy(&p0, g_GekkoLatchedInput.data(), sizeof(uint32_t));
+        if (p0 != 0) {
+            nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: SUCCESS, player0 raw value=0x%08x (call #%d)", p0, calls);
+        }
+    }
     return 1;
 }
 
 // ---------------------------------------------------------------------------
 // Submit local input
 // ---------------------------------------------------------------------------
+static std::atomic<int> g_DiagSampleNonzero{0};
+
 static bool submitLocalInput() {
     std::vector<uint32_t> physicalInputs(std::max(g_GekkoPlayers, 1), 0);
     if (!coreRollbackSampleInput(physicalInputs.data(), g_GekkoInputSize, 1)) {
         LOGE("Failed to sample input");
         return false;
+    }
+
+    if (physicalInputs[0] != 0 && g_DiagSampleNonzero.fetch_add(1) < 200) {
+        nativeDebugLogf("RollbackInputDiag", "submitLocalInput: sampled nonzero physical input=0x%08x", physicalInputs[0]);
     }
 
     bool submitted = false;

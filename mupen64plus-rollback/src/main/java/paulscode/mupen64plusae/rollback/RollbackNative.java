@@ -36,6 +36,16 @@ public class RollbackNative {
      */
     public static native void nativeSetCrashLogPath(String path);
 
+    /**
+     * Points diagnostic logging inside the native rollback code (input
+     * sampling, GekkoNet sync callback) at the same rollback_debug.log
+     * file RollbackDebugLog.java writes to, since adb/logcat isn't always
+     * available to pull those from otherwise. Call once, early, same as
+     * nativeSetCrashLogPath - e.g. with
+     * new File(getExternalFilesDir(null), "rollback_debug.log").
+     */
+    public static native void nativeSetDebugLogPath(String path);
+
     // Session management
     public static native boolean nativeStartP2PSession(
         String gameName, int players, int inputSize,
