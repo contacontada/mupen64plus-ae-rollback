@@ -501,9 +501,40 @@ static std::atomic<int> g_DiagCallbackCalls{0};
 static std::atomic<int> g_DiagCallbackFailNoSession{0};
 static std::atomic<int> g_DiagCallbackFailNoLatch{0};
 static std::atomic<int> g_DiagCallbackSuccess{0};
+static std::atomic<int> g_DiagCallbackSuccessNonzero{0};
+static std::atomic<int> g_DiagAdvanceEventCount{0};
+static std::atomic<int> g_DiagHiddenFrameCount{0};
+static std::atomic<int> g_DiagVisibleFrameCount{0};
+static std::atomic<int> g_DiagRealAdvanceCount{0};
+static std::atomic<int> g_DiagSampleNonzeroCount{0};
+
+// Periodic (time-throttled, not call-count-limited) summary of the
+// counters above, so a long test session's LATER behavior is still
+// visible even once the earlier <200-call-capped per-event logs have
+// all stopped firing. Safe to call from any thread that already calls
+// nativeDebugLog reasonably often (rollbackInputCallback fires at
+// roughly the game's frame rate for the whole session).
+static void maybeLogDiagSummary() {
+    static std::atomic<long long> s_LastSummaryMs{0};
+    auto now = std::chrono::steady_clock::now();
+    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()).count();
+    long long last = s_LastSummaryMs.load();
+    if (nowMs - last < 3000) return;
+    if (!s_LastSummaryMs.compare_exchange_strong(last, nowMs)) return; // another thread won the race
+
+    nativeDebugLogf("RollbackInputDiag",
+        "SUMMARY (every 3s): callback calls=%d success=%d (nonzero=%d) fail_no_session=%d fail_no_latch=%d | "
+        "advance_events=%d hidden_frames=%d visible_frames=%d real_advances=%d sampled_nonzero=%d",
+        g_DiagCallbackCalls.load(), g_DiagCallbackSuccess.load(), g_DiagCallbackSuccessNonzero.load(),
+        g_DiagCallbackFailNoSession.load(), g_DiagCallbackFailNoLatch.load(),
+        g_DiagAdvanceEventCount.load(), g_DiagHiddenFrameCount.load(), g_DiagVisibleFrameCount.load(),
+        g_DiagRealAdvanceCount.load(), g_DiagSampleNonzeroCount.load());
+}
 
 static int rollbackInputCallback(void* values, int size, int players) {
     int calls = g_DiagCallbackCalls.fetch_add(1);
+    maybeLogDiagSummary();
     if (!g_GekkoSession) {
         g_DiagCallbackFailNoSession++;
         if (calls < 200) nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: FAIL no session (call #%d)", calls);
@@ -537,8 +568,13 @@ static int rollbackInputCallback(void* values, int size, int players) {
         uint32_t p0 = 0;
         std::memcpy(&p0, g_GekkoLatchedInput.data(), sizeof(uint32_t));
         if (p0 != 0) {
+            g_DiagCallbackSuccessNonzero.fetch_add(1);
             nativeDebugLogf("RollbackInputDiag", "rollbackInputCallback: SUCCESS, player0 raw value=0x%08x (call #%d)", p0, calls);
         }
+    } else {
+        uint32_t p0 = 0;
+        std::memcpy(&p0, g_GekkoLatchedInput.data(), sizeof(uint32_t));
+        if (p0 != 0) g_DiagCallbackSuccessNonzero.fetch_add(1);
     }
     return 1;
 }
@@ -546,8 +582,6 @@ static int rollbackInputCallback(void* values, int size, int players) {
 // ---------------------------------------------------------------------------
 // Submit local input
 // ---------------------------------------------------------------------------
-static std::atomic<int> g_DiagSampleNonzero{0};
-
 static bool submitLocalInput() {
     std::vector<uint32_t> physicalInputs(std::max(g_GekkoPlayers, 1), 0);
     if (!coreRollbackSampleInput(physicalInputs.data(), g_GekkoInputSize, 1)) {
@@ -555,8 +589,11 @@ static bool submitLocalInput() {
         return false;
     }
 
-    if (physicalInputs[0] != 0 && g_DiagSampleNonzero.fetch_add(1) < 200) {
-        nativeDebugLogf("RollbackInputDiag", "submitLocalInput: sampled nonzero physical input=0x%08x", physicalInputs[0]);
+    if (physicalInputs[0] != 0) {
+        int n = g_DiagSampleNonzeroCount.fetch_add(1);
+        if (n < 200) {
+            nativeDebugLogf("RollbackInputDiag", "submitLocalInput: sampled nonzero physical input=0x%08x", physicalInputs[0]);
+        }
     }
 
     bool submitted = false;
@@ -664,6 +701,7 @@ static bool loadGekkoState(const GekkoGameEvent* event) {
 // this logic lived directly inside rollbackBeginFrame.)
 // ---------------------------------------------------------------------------
 static int gekkoTick() {
+    maybeLogDiagSummary();
     if (!g_GekkoSession) {
         g_LastNativeError = "gekkoTick: g_GekkoSession is null (session was destroyed or never created)";
         return 0;
@@ -760,6 +798,12 @@ static int gekkoTick() {
 
             switch (event->type) {
             case GekkoSaveEvent: {
+                {
+                    static std::atomic<int> s_SaveEvtCount{0};
+                    if (s_SaveEvtCount.fetch_add(1) < 10) {
+                        nativeDebugLog("RollbackInputDiag", "gekkoTick: GekkoSaveEvent received");
+                    }
+                }
                 // Save state into GekkoNet's provided buffer
                 unsigned int* checksum = event->data.save.checksum;
                 unsigned int* stateLen = event->data.save.state_len;
@@ -784,6 +828,14 @@ static int gekkoTick() {
                 }
                 break;
             case GekkoAdvanceEvent:
+                {
+                    int advCount = g_DiagAdvanceEventCount.fetch_add(1);
+                    if (advCount < 30) {
+                        nativeDebugLogf("RollbackInputDiag",
+                            "gekkoTick: GekkoAdvanceEvent received (rolling_back=%d running_ahead=%d frame=%d)",
+                            (int)event->data.adv.rolling_back, (int)event->data.adv.running_ahead, event->data.adv.frame);
+                    }
+                }
                 if (!latchGekkoInput(event)) {
                     g_LastNativeError = "gekkoTick: latchGekkoInput() failed at frame "
                         + std::to_string(event->data.adv.frame);
@@ -807,8 +859,8 @@ static int gekkoTick() {
                             return 0;
                         }
                         int after = g_DiagCallbackCalls.load();
-                        static std::atomic<int> s_HiddenFrameDiagCount{0};
-                        if (s_HiddenFrameDiagCount.fetch_add(1) < 30) {
+                        int hiddenCount = g_DiagHiddenFrameCount.fetch_add(1);
+                        if (hiddenCount < 30) {
                             nativeDebugLogf("RollbackInputDiag",
                                 "hidden frame: callback calls before=%d after=%d (delta=%d) during coreRollbackRunFrame(0)",
                                 before, after, after - before);
@@ -827,8 +879,8 @@ static int gekkoTick() {
                         return 0;
                     }
                     int after = g_DiagCallbackCalls.load();
-                    static std::atomic<int> s_VisibleFrameDiagCount{0};
-                    if (s_VisibleFrameDiagCount.fetch_add(1) < 30) {
+                    int visibleCount = g_DiagVisibleFrameCount.fetch_add(1);
+                    if (visibleCount < 30) {
                         nativeDebugLogf("RollbackInputDiag",
                             "visible frame: callback calls before=%d after=%d (delta=%d) during coreRollbackRunFrame(visible)",
                             before, after, after - before);
@@ -842,7 +894,13 @@ static int gekkoTick() {
             }
         }
 
-        if (hasRealAdvance) return 1;
+        if (hasRealAdvance) {
+            int realAdvCount = g_DiagRealAdvanceCount.fetch_add(1);
+            if (realAdvCount < 30) {
+                nativeDebugLog("RollbackInputDiag", "gekkoTick: returning 1 (real advance happened this tick)");
+            }
+            return 1;
+        }
     }
 }
 
@@ -1231,7 +1289,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch44)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch46)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
