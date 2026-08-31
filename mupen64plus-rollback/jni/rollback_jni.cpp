@@ -1289,7 +1289,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch46)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch47)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");

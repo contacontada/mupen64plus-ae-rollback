@@ -158,6 +158,13 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
     private final Object mWaitForNetPlay = new Object();
     private boolean mNetplayReady = false;
     private boolean mUsingNetplay = false;
+    // 0 = not a rollback session. See emuStart()'s guard below - a
+    // rollback session must be driven exclusively by
+    // RollbackNetplayService's own M64CMD_ROLLBACK_EXECUTE/
+    // M64CMD_ROLLBACK_RUN_FRAME calls, never by the normal M64CMD_EXECUTE
+    // loop this field gates.
+    private int mRollbackNumPlayers = 0;
+    private final Object mRollbackExecutionLock = new Object();
     private boolean mNetplayInitSuccess = false;
     private String netplayVideoPlugin;
     private String netplayRspPlugin;
@@ -241,6 +248,9 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
         mFpsCangedHandler.postDelayed(mLastFpsChangedChecker, 500);
 
         mIsShuttingDown = true;
+        synchronized (mRollbackExecutionLock) {
+            mRollbackExecutionLock.notifyAll();
+        }
         updateNotification();
 
         // Tell the core to quit
@@ -277,6 +287,9 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
             mFpsCangedHandler.postDelayed(mLastFpsChangedChecker, 500);
 
             mIsShuttingDown = true;
+            synchronized (mRollbackExecutionLock) {
+                mRollbackExecutionLock.notifyAll();
+            }
 
             mCoreInterface.setVolume(0);
 
@@ -728,8 +741,41 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
                         mCoreInterface.emuLoadFile(latestSave);
                     }
 
-                    // This call blocks until emulation is stopped
-                    mCoreInterface.emuStart();
+                    if (mRollbackNumPlayers > 0) {
+                        // Rollback sessions must be driven exclusively by
+                        // RollbackNetplayService's own nativeExecute()
+                        // (M64CMD_ROLLBACK_EXECUTE + repeated
+                        // M64CMD_ROLLBACK_RUN_FRAME), running on a
+                        // completely separate thread/class. emuStart()'s
+                        // M64CMD_EXECUTE is the core's NORMAL free-running
+                        // loop - it was being called here unconditionally,
+                        // for rollback sessions too, which let the core run
+                        // on its own via ordinary VI timing the whole time,
+                        // totally uncoordinated with GekkoNet's session.
+                        // That's why gekko_update_session() never produced
+                        // a single GekkoAdvanceEvent for an entire 12-second
+                        // test (confirmed via logging) while audio/video
+                        // played completely normally: the core was never
+                        // actually gated on rollback at all. Block here
+                        // instead, and let RollbackNetplayService's own
+                        // execute call be the only thing driving frames.
+                        paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "CoreService",
+                            "emuStart() SKIPPED (rollback mode, " + mRollbackNumPlayers
+                            + " players) - waiting instead, RollbackNetplayService drives execution");
+                        synchronized (mRollbackExecutionLock) {
+                            while (!mIsShuttingDown && !mIsRestarting) {
+                                try {
+                                    mRollbackExecutionLock.wait();
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        // This call blocks until emulation is stopped
+                        mCoreInterface.emuStart();
+                    }
                 }
 
                 if (mNetplayInitSuccess) {
@@ -1032,11 +1078,11 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
             mVideoRenderWidth = extras.getInt( ActivityHelper.Keys.VIDEO_RENDER_WIDTH );
             mVideoRenderHeight = extras.getInt( ActivityHelper.Keys.VIDEO_RENDER_HEIGHT );
             mUsingNetplay = extras.getBoolean(ActivityHelper.Keys.NETPLAY_ENABLED);
-            int rollbackNumPlayers = extras.getInt(ActivityHelper.Keys.ROLLBACK_NUM_PLAYERS, 0);
+            mRollbackNumPlayers = extras.getInt(ActivityHelper.Keys.ROLLBACK_NUM_PLAYERS, 0);
 
             mGamePrefs = new GamePrefs( this, mRomMd5, mRomCrc, mRomHeaderName, mRomGoodName,
                     CountryCode.getCountryCode(mRomCountryCode).toString(), mAppData, mGlobalPrefs,
-                    rollbackNumPlayers );
+                    mRollbackNumPlayers );
 
             mGameDataManager = new GameDataManager(mGlobalPrefs, mGamePrefs, mGlobalPrefs.maxAutoSaves);
             mGameDataManager.makeDirs();
