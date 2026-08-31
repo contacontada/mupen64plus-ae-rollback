@@ -44,6 +44,7 @@ static std::atomic<int> g_DiagUdpSendErrors{0};
 static std::atomic<long long> g_DiagUdpBytesSent{0};
 static std::atomic<int> g_DiagUdpRecvCalls{0};
 static std::atomic<long long> g_DiagUdpBytesRecv{0};
+static std::atomic<int> g_DiagUdpAdapterCalledWithBadSocket{0};
 static std::string g_LastNativeError;
 
 // --- Native debug log (writes into the same rollback_debug.log the user
@@ -203,7 +204,10 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeSetCrashLogPath(
 
 
 static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) {
-    if (g_UdpSocket < 0 || !addr || !data || length <= 0) return;
+    if (g_UdpSocket < 0 || !addr || !data || length <= 0) {
+        if (g_UdpSocket < 0) g_DiagUdpAdapterCalledWithBadSocket.fetch_add(1);
+        return;
+    }
     // addr->data is a string like "192.168.1.1:4444"
     std::string addrStr(static_cast<const char*>(addr->data), addr->size);
     size_t colonPos = addrStr.find(':');
@@ -291,7 +295,7 @@ static bool posix_udp_init(unsigned short port) {
     }
     g_UdpSocket = socket(AF_INET, SOCK_DGRAM, 0);
     if (g_UdpSocket < 0) {
-        LOGE("Failed to create UDP socket: %s", strerror(errno));
+        nativeDebugLogf("RollbackInputDiag", "posix_udp_init: FAILED to create UDP socket: %s", strerror(errno));
         return false;
     }
     // Non-blocking
@@ -304,12 +308,23 @@ static bool posix_udp_init(unsigned short port) {
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
     if (bind(g_UdpSocket, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-        LOGE("Failed to bind UDP socket to port %d: %s", port, strerror(errno));
+        // Logged to the file (not just logcat) since this is a very
+        // plausible failure specifically when testing two players via an
+        // app-cloner on ONE physical device: if both cloned instances
+        // ever end up trying to bind the same local port (e.g. a fixed/
+        // default port, or a port collision from how each instance
+        // negotiates with the lobby), the second bind() fails with
+        // EADDRINUSE - and every send/receive call afterward silently
+        // no-ops forever (g_UdpSocket stays -1), with zero indication
+        // anywhere the person could actually see without this.
+        nativeDebugLogf("RollbackInputDiag",
+            "posix_udp_init: FAILED to bind UDP socket to port %d: errno=%d (%s)",
+            port, errno, strerror(errno));
         close(g_UdpSocket);
         g_UdpSocket = -1;
         return false;
     }
-    LOGI("UDP socket bound to port %d", port);
+    nativeDebugLogf("RollbackInputDiag", "posix_udp_init: SUCCESS, UDP socket bound to port %d", port);
     return true;
 }
 
@@ -544,13 +559,13 @@ static void maybeLogDiagSummary() {
     nativeDebugLogf("RollbackInputDiag",
         "SUMMARY (every 3s): callback calls=%d success=%d (nonzero=%d) fail_no_session=%d fail_no_latch=%d | "
         "advance_events=%d hidden_frames=%d visible_frames=%d real_advances=%d sampled_nonzero=%d | "
-        "udp: send_calls=%d send_errors=%d bytes_sent=%lld recv_calls=%d bytes_recv=%lld",
+        "udp: send_calls=%d send_errors=%d bytes_sent=%lld recv_calls=%d bytes_recv=%lld bad_socket_calls=%d",
         g_DiagCallbackCalls.load(), g_DiagCallbackSuccess.load(), g_DiagCallbackSuccessNonzero.load(),
         g_DiagCallbackFailNoSession.load(), g_DiagCallbackFailNoLatch.load(),
         g_DiagAdvanceEventCount.load(), g_DiagHiddenFrameCount.load(), g_DiagVisibleFrameCount.load(),
         g_DiagRealAdvanceCount.load(), g_DiagSampleNonzeroCount.load(),
         g_DiagUdpSendCalls.load(), g_DiagUdpSendErrors.load(), g_DiagUdpBytesSent.load(),
-        g_DiagUdpRecvCalls.load(), g_DiagUdpBytesRecv.load());
+        g_DiagUdpRecvCalls.load(), g_DiagUdpBytesRecv.load(), g_DiagUdpAdapterCalledWithBadSocket.load());
 }
 
 static int rollbackInputCallback(void* values, int size, int players) {
@@ -1310,7 +1325,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch48)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch49)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
