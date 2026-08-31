@@ -759,7 +759,7 @@ public class CoreService extends Service implements CoreInterface.OnFpsChangedLi
                         // actually gated on rollback at all. Block here
                         // instead, and let RollbackNetplayService's own
                         // execute call be the only thing driving frames.
-                        paulscode.mupen64plusae.rollback.RollbackDebugLog.log(this, "CoreService",
+                        paulscode.mupen64plusae.rollback.RollbackDebugLog.log(CoreService.this, "CoreService",
                             "emuStart() SKIPPED (rollback mode, " + mRollbackNumPlayers
                             + " players) - waiting instead, RollbackNetplayService drives execution");
                         synchronized (mRollbackExecutionLock) {
