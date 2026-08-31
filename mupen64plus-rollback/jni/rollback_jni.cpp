@@ -39,6 +39,11 @@
 #include <signal.h>
 
 static int g_UdpSocket = -1;
+static std::atomic<int> g_DiagUdpSendCalls{0};
+static std::atomic<int> g_DiagUdpSendErrors{0};
+static std::atomic<long long> g_DiagUdpBytesSent{0};
+static std::atomic<int> g_DiagUdpRecvCalls{0};
+static std::atomic<long long> g_DiagUdpBytesRecv{0};
 static std::string g_LastNativeError;
 
 // --- Native debug log (writes into the same rollback_debug.log the user
@@ -213,8 +218,19 @@ static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) 
     dest.sin_port = htons(static_cast<uint16_t>(port));
     inet_pton(AF_INET, ip.c_str(), &dest.sin_addr);
 
-    sendto(g_UdpSocket, data, static_cast<size_t>(length), 0,
+    ssize_t sent = sendto(g_UdpSocket, data, static_cast<size_t>(length), 0,
            reinterpret_cast<struct sockaddr*>(&dest), sizeof(dest));
+    g_DiagUdpSendCalls.fetch_add(1);
+    if (sent < 0) {
+        g_DiagUdpSendErrors.fetch_add(1);
+        int n = g_DiagUdpSendErrors.load();
+        if (n <= 10) {
+            nativeDebugLogf("RollbackInputDiag", "posix_udp_send: sendto FAILED errno=%d (%s) dest=%s",
+                errno, strerror(errno), addrStr.c_str());
+        }
+    } else {
+        g_DiagUdpBytesSent.fetch_add((long long)sent);
+    }
 }
 
 static std::vector<GekkoNetResult*> g_PosixResults;
@@ -231,6 +247,8 @@ static GekkoNetResult** posix_udp_receive(int* length) {
         ssize_t recvd = recvfrom(g_UdpSocket, buf, sizeof(buf), 0,
                                   reinterpret_cast<struct sockaddr*>(&src), &srcLen);
         if (recvd <= 0) break;
+        g_DiagUdpRecvCalls.fetch_add(1);
+        g_DiagUdpBytesRecv.fetch_add((long long)recvd);
 
         char addrBuf[64];
         inet_ntop(AF_INET, &src.sin_addr, addrBuf, sizeof(addrBuf));
@@ -525,11 +543,14 @@ static void maybeLogDiagSummary() {
 
     nativeDebugLogf("RollbackInputDiag",
         "SUMMARY (every 3s): callback calls=%d success=%d (nonzero=%d) fail_no_session=%d fail_no_latch=%d | "
-        "advance_events=%d hidden_frames=%d visible_frames=%d real_advances=%d sampled_nonzero=%d",
+        "advance_events=%d hidden_frames=%d visible_frames=%d real_advances=%d sampled_nonzero=%d | "
+        "udp: send_calls=%d send_errors=%d bytes_sent=%lld recv_calls=%d bytes_recv=%lld",
         g_DiagCallbackCalls.load(), g_DiagCallbackSuccess.load(), g_DiagCallbackSuccessNonzero.load(),
         g_DiagCallbackFailNoSession.load(), g_DiagCallbackFailNoLatch.load(),
         g_DiagAdvanceEventCount.load(), g_DiagHiddenFrameCount.load(), g_DiagVisibleFrameCount.load(),
-        g_DiagRealAdvanceCount.load(), g_DiagSampleNonzeroCount.load());
+        g_DiagRealAdvanceCount.load(), g_DiagSampleNonzeroCount.load(),
+        g_DiagUdpSendCalls.load(), g_DiagUdpSendErrors.load(), g_DiagUdpBytesSent.load(),
+        g_DiagUdpRecvCalls.load(), g_DiagUdpBytesRecv.load());
 }
 
 static int rollbackInputCallback(void* values, int size, int players) {
@@ -1289,7 +1310,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch47)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch48)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
