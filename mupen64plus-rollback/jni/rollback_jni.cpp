@@ -752,6 +752,27 @@ static int gekkoTick() {
         g_GekkoHasLatchedInput = false;
     }
 
+    // Submit this tick's local input BEFORE polling the network, so
+    // gekko_network_poll() below actually has something new of ours to
+    // send this round. Getting this order backwards was a real, serious
+    // bug: gekko_network_poll() ran first (with nothing new queued up
+    // yet, since submitLocalInput() hadn't run), then submitLocalInput()
+    // queued this tick's input - but network_poll() is only called HERE,
+    // once per gekkoTick() invocation. The very next thing was an
+    // unbounded spin loop waiting for remote events, which never calls
+    // gekko_network_poll() again - so that queued local input never
+    // actually left the device. The remote peer never received anything
+    // to respond to, so nothing ever came back either, so the spin loop
+    // never exits gekkoTick() to get a chance to poll the network again.
+    // A real network-level deadlock, confirmed by 15+ seconds of a test
+    // session logging nothing at all past its very first line (the
+    // periodic per-tick summary never got to run a second time, because
+    // the first and only gekkoTick() call never returned).
+    if (!submitLocalInput()) {
+        g_LastNativeError = "gekkoTick: submitLocalInput() failed";
+        return 0;
+    }
+
     gekko_network_poll(g_GekkoSession);
     // Process session events (desync, disconnect, etc.)
     {
@@ -804,17 +825,22 @@ static int gekkoTick() {
     }
     applyFramePacing();
 
-    if (!submitLocalInput()) {
-        g_LastNativeError = "gekkoTick: submitLocalInput() failed";
-        return 0;
-    }
-
     // Event loop - process until we get a real advance
     for (;;) {
         if (g_GekkoStopRequested.load()) {
             g_LastNativeError = "gekkoTick: g_GekkoStopRequested became true inside the event loop";
             return 0;
         }
+
+        // Keep servicing the network while we wait - see the comment
+        // above submitLocalInput(). Without this, nothing sent while
+        // already inside this loop (including retransmits GekkoNet
+        // itself may want to make) would ever actually go out, and
+        // nothing incoming would ever be picked up either, until this
+        // whole gekkoTick() call happened to return - which it can't do
+        // until an event shows up, which needs exactly this to have been
+        // happening in the first place.
+        gekko_network_poll(g_GekkoSession);
 
         int count = 0;
         GekkoGameEvent** events = gekko_update_session(g_GekkoSession, &count);
@@ -1325,7 +1351,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch49)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch50)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
