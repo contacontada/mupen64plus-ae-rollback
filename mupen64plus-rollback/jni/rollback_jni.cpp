@@ -45,6 +45,8 @@ static std::atomic<long long> g_DiagUdpBytesSent{0};
 static std::atomic<int> g_DiagUdpRecvCalls{0};
 static std::atomic<long long> g_DiagUdpBytesRecv{0};
 static std::atomic<int> g_DiagUdpAdapterCalledWithBadSocket{0};
+static std::atomic<int> g_DiagUdpSendEntryCalls{0};
+static std::atomic<int> g_DiagUdpReceiveEntryCalls{0};
 static std::string g_LastNativeError;
 
 // --- Native debug log (writes into the same rollback_debug.log the user
@@ -204,6 +206,14 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeSetCrashLogPath(
 
 
 static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) {
+    // Unconditional entry counter - proves whether GekkoNet is even
+    // calling this adapter at all, independent of any guard below. If
+    // this never increments, the session's internal _host pointer never
+    // got set (or got reset after we set it) - GameSession::Poll() has
+    // its own early "if (!_host) return;" guard that would make it
+    // silently do nothing, forever, matching a session that starts fine
+    // but never sends or receives a single byte.
+    g_DiagUdpSendEntryCalls.fetch_add(1);
     if (g_UdpSocket < 0 || !addr || !data || length <= 0) {
         if (g_UdpSocket < 0) g_DiagUdpAdapterCalledWithBadSocket.fetch_add(1);
         return;
@@ -240,6 +250,7 @@ static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) 
 static std::vector<GekkoNetResult*> g_PosixResults;
 
 static GekkoNetResult** posix_udp_receive(int* length) {
+    g_DiagUdpReceiveEntryCalls.fetch_add(1);
     g_PosixResults.clear();
     if (length) *length = 0;
     if (g_UdpSocket < 0 || !length) return g_PosixResults.data();
@@ -559,11 +570,12 @@ static void maybeLogDiagSummary() {
     nativeDebugLogf("RollbackInputDiag",
         "SUMMARY (every 3s): callback calls=%d success=%d (nonzero=%d) fail_no_session=%d fail_no_latch=%d | "
         "advance_events=%d hidden_frames=%d visible_frames=%d real_advances=%d sampled_nonzero=%d | "
-        "udp: send_calls=%d send_errors=%d bytes_sent=%lld recv_calls=%d bytes_recv=%lld bad_socket_calls=%d",
+        "udp: send_entry=%d recv_entry=%d send_calls=%d send_errors=%d bytes_sent=%lld recv_calls=%d bytes_recv=%lld bad_socket_calls=%d",
         g_DiagCallbackCalls.load(), g_DiagCallbackSuccess.load(), g_DiagCallbackSuccessNonzero.load(),
         g_DiagCallbackFailNoSession.load(), g_DiagCallbackFailNoLatch.load(),
         g_DiagAdvanceEventCount.load(), g_DiagHiddenFrameCount.load(), g_DiagVisibleFrameCount.load(),
         g_DiagRealAdvanceCount.load(), g_DiagSampleNonzeroCount.load(),
+        g_DiagUdpSendEntryCalls.load(), g_DiagUdpReceiveEntryCalls.load(),
         g_DiagUdpSendCalls.load(), g_DiagUdpSendErrors.load(), g_DiagUdpBytesSent.load(),
         g_DiagUdpRecvCalls.load(), g_DiagUdpBytesRecv.load(), g_DiagUdpAdapterCalledWithBadSocket.load());
 }
@@ -841,6 +853,7 @@ static int gekkoTick() {
         // until an event shows up, which needs exactly this to have been
         // happening in the first place.
         gekko_network_poll(g_GekkoSession);
+        maybeLogDiagSummary();
 
         int count = 0;
         GekkoGameEvent** events = gekko_update_session(g_GekkoSession, &count);
@@ -1351,7 +1364,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch50)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch51)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
