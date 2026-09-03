@@ -434,7 +434,10 @@ public class RmgkLobbyClient {
             // versioning, so the server always rejected it as too old.
             // Report the RMG-K release this port is tracking instead, since
             // that's what the server's version gate actually understands.
-            data.put("clientVersion", "0.9.13");
+            // Bumped to match RMG-K 0.9.14 - the server's minimum-version
+            // gate moved again with that release, same mechanism as the
+            // 0.9.13 bump.
+            data.put("clientVersion", "0.9.14");
             JSONArray romArr = new JSONArray();
             for (String h : pendingRomHashes) romArr.put(h);
             data.put("romHashes", romArr);
