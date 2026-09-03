@@ -77,7 +77,7 @@ static void nativeDebugLog(const char* tag, const char* message) {
 
 // printf-style convenience wrapper around nativeDebugLog() above.
 static void nativeDebugLogf(const char* tag, const char* fmt, ...) {
-    char buf[256];
+    char buf[1024];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
@@ -1364,7 +1364,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch52)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch53)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
