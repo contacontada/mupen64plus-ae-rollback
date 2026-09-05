@@ -220,6 +220,13 @@ static void posix_udp_send(GekkoNetAddress* addr, const char* data, int length) 
     }
     // addr->data is a string like "192.168.1.1:4444"
     std::string addrStr(static_cast<const char*>(addr->data), addr->size);
+    {
+        static std::atomic<int> s_DestLogCount{0};
+        int n = s_DestLogCount.fetch_add(1);
+        if (n < 10 || n % 200 == 0) {
+            nativeDebugLogf("RollbackInputDiag", "posix_udp_send: destination=%s (send #%d)", addrStr.c_str(), n);
+        }
+    }
     size_t colonPos = addrStr.find(':');
     if (colonPos == std::string::npos) return;
     std::string ip = addrStr.substr(0, colonPos);
@@ -1364,7 +1371,7 @@ Java_paulscode_mupen64plusae_rollback_RollbackNative_nativeExecute(
     // missing from the log, the running .so predates this patch (a stale
     // build), full stop - nothing else in this diagnosis matters until
     // that's fixed first.
-    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch53)");
+    nativeDebugLog("RollbackInputDiag", "BUILD MARKER: nativeExecute() ENTER (patch54)");
 
     if (!g_GekkoSession) {
         LOGE("No active session");
